@@ -36,6 +36,7 @@ API endpoints:
 Security:
 - All `/api/audits/*` endpoints require `x-api-key` header matching `API_AUTH_KEY`.
 - Sliding-window rate limit is enforced per caller via `API_RATE_LIMIT_PER_MINUTE`.
+- If `API_AUTH_KEY` is not configured, audit endpoints return `503` by design.
 
 ## Run Frontend
 
@@ -52,6 +53,10 @@ The UI now supports:
 - Loading prior run results
 - Async run submission with status polling
 - Active run cancellation and authenticated API calls
+
+## CI
+
+GitHub Actions workflow runs backend compile/tests and frontend production build on PRs and pushes to `main`.
 
 ## Test
 
