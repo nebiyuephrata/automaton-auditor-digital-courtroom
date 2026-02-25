@@ -201,3 +201,88 @@ async def test_cancel_endpoint_can_cancel_queued_run(monkeypatch) -> None:
             assert response.json()["status"] == "canceled"
     finally:
         temp_dir.cleanup()
+
+
+@pytest.mark.anyio
+async def test_run_async_rejects_invalid_repo_url(monkeypatch) -> None:
+    _store, temp_dir = _configure_test_runtime(monkeypatch)
+    try:
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/audits/run-async",
+                headers={"x-api-key": "test-key"},
+                json={
+                    "repo_url": "github.com/example/repo",
+                    "pdf_path": "reports/final_report.pdf",
+                    "rubric_path": "rubric.json",
+                },
+            )
+            assert response.status_code == 422
+    finally:
+        temp_dir.cleanup()
+
+
+@pytest.mark.anyio
+async def test_run_async_rejects_unsupported_provider(monkeypatch) -> None:
+    _store, temp_dir = _configure_test_runtime(monkeypatch)
+    try:
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/audits/run-async",
+                headers={"x-api-key": "test-key"},
+                json={
+                    "repo_url": "https://example.com/repo.git",
+                    "pdf_path": "reports/final_report.pdf",
+                    "rubric_path": "rubric.json",
+                    "runtime_config": {
+                        "judge_provider": "unsupported",
+                        "judge_model": "x",
+                        "vision_provider": "openai",
+                        "vision_model": "gpt-4o-mini",
+                    },
+                },
+            )
+            assert response.status_code == 422
+            assert "judge_provider" in response.json()["detail"]
+    finally:
+        temp_dir.cleanup()
+
+
+@pytest.mark.anyio
+async def test_run_async_rejects_unknown_rubric_preset(monkeypatch) -> None:
+    _store, temp_dir = _configure_test_runtime(monkeypatch)
+    try:
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/audits/run-async",
+                headers={"x-api-key": "test-key"},
+                json={
+                    "repo_url": "https://example.com/repo.git",
+                    "pdf_path": "reports/final_report.pdf",
+                    "rubric_path": "",
+                    "rubric_preset": "missing_preset",
+                },
+            )
+            assert response.status_code == 422
+            assert "Unknown rubric preset" in response.json()["detail"]
+    finally:
+        temp_dir.cleanup()
+
+
+@pytest.mark.anyio
+async def test_response_includes_request_id_header(monkeypatch) -> None:
+    _store, temp_dir = _configure_test_runtime(monkeypatch)
+    try:
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(
+                "/api/audits",
+                headers={"x-api-key": "test-key", "x-request-id": "req-123"},
+            )
+            assert response.status_code == 200
+            assert response.headers.get("x-request-id") == "req-123"
+    finally:
+        temp_dir.cleanup()

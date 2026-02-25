@@ -84,6 +84,8 @@ Security:
 - All `/api/audits/*` endpoints require `x-api-key` header matching `API_AUTH_KEY`.
 - Sliding-window rate limit is enforced per caller via `API_RATE_LIMIT_PER_MINUTE`.
 - If `API_AUTH_KEY` is not configured, audit endpoints return `503` by design.
+- API responses include `x-request-id` for traceability (client-provided value is echoed when present).
+- Input validation rejects malformed `repo_url`, unsupported runtime providers, and unknown rubric presets.
 
 Governance scoring:
 - Chief Justice computes deterministic `governance_maturity` bands:

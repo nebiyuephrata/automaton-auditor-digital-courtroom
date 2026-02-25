@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.config.settings import load_settings
 from src.service.async_jobs import AuditJobManager
@@ -20,10 +21,25 @@ from src.utils.rubric_loader import (
 class AuditRunRequest(BaseModel):
     repo_url: str = Field(min_length=1)
     pdf_path: str = Field(min_length=1)
-    rubric_path: str = Field(default="rubric.json", min_length=1)
+    rubric_path: str = Field(default="rubric.json")
     rubric_preset: str | None = Field(default=DEFAULT_RUBRIC_PRESET)
     runtime_config: RuntimeLLMConfig = Field(default_factory=RuntimeLLMConfig)
     output_path: str | None = Field(default=None)
+
+    @field_validator("repo_url")
+    @classmethod
+    def validate_repo_url(cls, value: str) -> str:
+        lowered = value.strip().lower()
+        if not (lowered.startswith("https://") or lowered.startswith("http://")):
+            raise ValueError("repo_url must be an HTTP(S) URL")
+        if " " in value.strip():
+            raise ValueError("repo_url must not contain whitespace")
+        return value.strip()
+
+    @field_validator("rubric_path")
+    @classmethod
+    def normalize_rubric_path(cls, value: str) -> str:
+        return value.strip()
 
 
 class AuditRunResponse(BaseModel):
@@ -79,6 +95,14 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def attach_request_id(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or uuid4().hex
+    response = await call_next(request)
+    response.headers["x-request-id"] = request_id
+    return response
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
@@ -123,10 +147,12 @@ async def run_audit_endpoint(
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
 ) -> AuditRunResponse:
+    _validate_runtime_config(request.runtime_config)
     resolved_rubric = resolve_rubric_path(
         rubric_path=request.rubric_path,
         rubric_preset=request.rubric_preset,
     )
+    _validate_rubric_preset(request.rubric_preset, request.rubric_path, resolved_rubric)
     run_id = store.create_run(
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
@@ -167,10 +193,12 @@ async def run_audit_async_endpoint(
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
 ) -> AuditRunRecordResponse:
+    _validate_runtime_config(request.runtime_config)
     resolved_rubric = resolve_rubric_path(
         rubric_path=request.rubric_path,
         rubric_preset=request.rubric_preset,
     )
+    _validate_rubric_preset(request.rubric_preset, request.rubric_path, resolved_rubric)
     run_id = store.create_run(
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
@@ -245,3 +273,32 @@ async def cancel_audit_endpoint(
     if not job_manager.cancel(run_id):
         raise HTTPException(status_code=409, detail="Run is not cancelable")
     return AuditRunRecordResponse(**store.get_run(run_id))
+
+
+def _validate_runtime_config(runtime_config: RuntimeLLMConfig) -> None:
+    valid_providers = {"openai", "anthropic", "ollama"}
+    if runtime_config.judge_provider.lower() not in valid_providers:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported judge_provider: {runtime_config.judge_provider}",
+        )
+    if runtime_config.vision_provider.lower() not in valid_providers:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported vision_provider: {runtime_config.vision_provider}",
+        )
+
+
+def _validate_rubric_preset(
+    rubric_preset: str | None, requested_rubric_path: str, resolved_rubric_path: str
+) -> None:
+    custom_rubric_requested = requested_rubric_path.strip() != ""
+    if custom_rubric_requested:
+        return
+    expected_preset = rubric_preset or DEFAULT_RUBRIC_PRESET
+    if resolved_rubric_path.endswith(f"{expected_preset}.json"):
+        return
+    raise HTTPException(
+        status_code=422,
+        detail=f"Unknown rubric preset: {rubric_preset}",
+    )
