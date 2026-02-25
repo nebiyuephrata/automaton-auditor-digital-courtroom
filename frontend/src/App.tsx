@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type AuditResponse = {
   run_id: string;
@@ -32,6 +32,9 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResponse | null>(null);
   const [history, setHistory] = useState<AuditRecord[]>([]);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+
+  const pollTimerRef = useRef<number | null>(null);
 
   const reportJson = useMemo(() => {
     if (!result?.final_report) {
@@ -58,6 +61,11 @@ export function App() {
 
   useEffect(() => {
     void loadHistory();
+    return () => {
+      if (pollTimerRef.current !== null) {
+        window.clearInterval(pollTimerRef.current);
+      }
+    };
   }, []);
 
   async function loadRunResult(runId: string) {
@@ -77,13 +85,47 @@ export function App() {
     }
   }
 
+  async function trackRunUntilTerminal(runId: string) {
+    if (pollTimerRef.current !== null) {
+      window.clearInterval(pollTimerRef.current);
+    }
+
+    pollTimerRef.current = window.setInterval(async () => {
+      try {
+        const response = await fetch(`${apiBase}/api/audits/${runId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to poll run (${response.status})`);
+        }
+        const record = (await response.json()) as AuditRecord;
+        await loadHistory();
+
+        if (record.status === "completed" || record.status === "failed") {
+          if (pollTimerRef.current !== null) {
+            window.clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+          }
+          setActiveRunId(null);
+          await loadRunResult(runId);
+        }
+      } catch (pollError) {
+        if (pollTimerRef.current !== null) {
+          window.clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+        }
+        setActiveRunId(null);
+        setError(pollError instanceof Error ? pollError.message : "Polling failed");
+      }
+    }, 1500);
+  }
+
   async function onRunAudit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setResult(null);
 
     try {
-      const response = await fetch(`${apiBase}/api/audits/run`, {
+      const response = await fetch(`${apiBase}/api/audits/run-async`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -99,9 +141,10 @@ export function App() {
         throw new Error(`API ${response.status}: ${body}`);
       }
 
-      const payload = (await response.json()) as AuditResponse;
-      setResult(payload);
+      const payload = (await response.json()) as AuditRecord;
+      setActiveRunId(payload.run_id);
       await loadHistory();
+      await trackRunUntilTerminal(payload.run_id);
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Unknown error");
     } finally {
@@ -155,8 +198,8 @@ export function App() {
               placeholder="audit/report_onself_generated/final_audit_report.md"
             />
           </label>
-          <button type="submit" disabled={loading}>
-            {loading ? "Running..." : "Run Audit"}
+          <button type="submit" disabled={loading || activeRunId !== null}>
+            {activeRunId ? "Audit Running..." : loading ? "Submitting..." : "Run Audit"}
           </button>
         </form>
       </section>
@@ -187,10 +230,13 @@ export function App() {
       <section className="panel">
         <h2>Output</h2>
         {error && <p className="error">{error}</p>}
-        {!error && !result && <p>No audit run selected.</p>}
+        {!error && activeRunId && <p>Run {activeRunId} is in progress. Polling status...</p>}
+        {!error && !activeRunId && !result && <p>No audit run selected.</p>}
         {result && (
           <>
-            <p><strong>Run ID:</strong> {result.run_id}</p>
+            <p>
+              <strong>Run ID:</strong> {result.run_id}
+            </p>
             {result.errors && result.errors.length > 0 && (
               <div>
                 <h3>Execution Errors</h3>
