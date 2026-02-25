@@ -169,3 +169,19 @@ def get_audit_result_endpoint(
         return store.get_result(run_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Result for run {run_id} not found") from exc
+
+
+@app.post("/api/audits/{run_id}/cancel", response_model=AuditRunRecordResponse)
+def cancel_audit_endpoint(
+    run_id: str,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> AuditRunRecordResponse:
+    try:
+        store.get_run(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found") from exc
+
+    if not job_manager.cancel(run_id):
+        raise HTTPException(status_code=409, detail="Run is not cancelable")
+    return AuditRunRecordResponse(**store.get_run(run_id))
