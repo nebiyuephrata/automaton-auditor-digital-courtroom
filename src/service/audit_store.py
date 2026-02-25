@@ -73,9 +73,10 @@ class AuditStore:
         final_report: Dict[str, Any] | None,
         rendered_markdown: str,
         errors: List[str],
+        status_override: str | None = None,
     ) -> None:
         record = self.get_run(run_id)
-        status = "failed" if errors else "completed"
+        status = status_override or ("failed" if errors else "completed")
         overall_score = None
         if final_report is not None:
             overall_score = final_report.get("overall_score")

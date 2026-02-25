@@ -28,9 +28,14 @@ uv run uvicorn src.server:app --host 0.0.0.0 --port 8000 --reload
 API endpoints:
 - `POST /api/audits/run`
 - `POST /api/audits/run-async`
+- `POST /api/audits/{run_id}/cancel`
 - `GET /api/audits`
 - `GET /api/audits/{run_id}`
 - `GET /api/audits/{run_id}/result`
+
+Security:
+- All `/api/audits/*` endpoints require `x-api-key` header matching `API_AUTH_KEY`.
+- Sliding-window rate limit is enforced per caller via `API_RATE_LIMIT_PER_MINUTE`.
 
 ## Run Frontend
 
@@ -46,6 +51,7 @@ The UI now supports:
 - Viewing persisted run history
 - Loading prior run results
 - Async run submission with status polling
+- Active run cancellation and authenticated API calls
 
 ## Test
 

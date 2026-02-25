@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from src.config.settings import load_settings
 from src.service.async_jobs import AuditJobManager
 from src.service.audit_runner import run_audit
 from src.service.audit_store import AuditStore
+from src.service.security import SecurityConfig, SlidingWindowRateLimiter, is_api_key_valid
 
 
 class AuditRunRequest(BaseModel):
@@ -36,6 +38,12 @@ class AuditRunRecordResponse(BaseModel):
 app = FastAPI(title="Automaton Auditor API", version="0.1.0")
 store = AuditStore()
 job_manager = AuditJobManager(store)
+settings = load_settings()
+security_config = SecurityConfig(
+    api_auth_key=settings.api_auth_key,
+    rate_limit_per_minute=settings.api_rate_limit_per_minute,
+)
+rate_limiter = SlidingWindowRateLimiter(security_config.rate_limit_per_minute)
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,8 +59,29 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+def enforce_api_auth(x_api_key: str | None = Header(default=None)) -> None:
+    if not is_api_key_valid(x_api_key, security_config.api_auth_key):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def enforce_rate_limit(
+    request: Request,
+    response: Response,
+    x_api_key: str | None = Header(default=None),
+) -> None:
+    caller = x_api_key or (request.client.host if request.client else "unknown")
+    allowed, retry_after = rate_limiter.allow(caller)
+    if not allowed:
+        response.headers["Retry-After"] = str(retry_after)
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+
 @app.post("/api/audits/run", response_model=AuditRunResponse)
-def run_audit_endpoint(request: AuditRunRequest) -> AuditRunResponse:
+def run_audit_endpoint(
+    request: AuditRunRequest,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> AuditRunResponse:
     run_id = store.create_run(
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
@@ -86,7 +115,11 @@ def run_audit_endpoint(request: AuditRunRequest) -> AuditRunResponse:
 
 
 @app.post("/api/audits/run-async", response_model=AuditRunRecordResponse)
-def run_audit_async_endpoint(request: AuditRunRequest) -> AuditRunRecordResponse:
+def run_audit_async_endpoint(
+    request: AuditRunRequest,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> AuditRunRecordResponse:
     run_id = store.create_run(
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
@@ -105,13 +138,20 @@ def run_audit_async_endpoint(request: AuditRunRequest) -> AuditRunRecordResponse
 
 
 @app.get("/api/audits", response_model=list[AuditRunRecordResponse])
-def list_audits_endpoint() -> list[AuditRunRecordResponse]:
+def list_audits_endpoint(
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> list[AuditRunRecordResponse]:
     records = store.list_runs()
     return [AuditRunRecordResponse(**record) for record in records]
 
 
 @app.get("/api/audits/{run_id}", response_model=AuditRunRecordResponse)
-def get_audit_endpoint(run_id: str) -> AuditRunRecordResponse:
+def get_audit_endpoint(
+    run_id: str,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> AuditRunRecordResponse:
     try:
         record = store.get_run(run_id)
     except FileNotFoundError as exc:
@@ -120,8 +160,28 @@ def get_audit_endpoint(run_id: str) -> AuditRunRecordResponse:
 
 
 @app.get("/api/audits/{run_id}/result")
-def get_audit_result_endpoint(run_id: str) -> dict:
+def get_audit_result_endpoint(
+    run_id: str,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> dict:
     try:
         return store.get_result(run_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Result for run {run_id} not found") from exc
+
+
+@app.post("/api/audits/{run_id}/cancel", response_model=AuditRunRecordResponse)
+def cancel_audit_endpoint(
+    run_id: str,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> AuditRunRecordResponse:
+    try:
+        store.get_run(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found") from exc
+
+    if not job_manager.cancel(run_id):
+        raise HTTPException(status_code=409, detail="Run is not cancelable")
+    return AuditRunRecordResponse(**store.get_run(run_id))

@@ -20,6 +20,16 @@ type AuditRecord = {
 };
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const apiKey = import.meta.env.VITE_API_KEY ?? "change-me";
+
+async function apiFetch(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers ?? {});
+  headers.set("x-api-key", apiKey);
+  if (!headers.has("Content-Type") && init.method && init.method !== "GET") {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`${apiBase}${path}`, { ...init, headers });
+}
 
 export function App() {
   const [repoUrl, setRepoUrl] = useState("");
@@ -46,7 +56,7 @@ export function App() {
   async function loadHistory() {
     setHistoryLoading(true);
     try {
-      const response = await fetch(`${apiBase}/api/audits`);
+      const response = await apiFetch(`/api/audits`);
       if (!response.ok) {
         throw new Error(`Failed to load history (${response.status})`);
       }
@@ -72,7 +82,7 @@ export function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiBase}/api/audits/${runId}/result`);
+      const response = await apiFetch(`/api/audits/${runId}/result`);
       if (!response.ok) {
         throw new Error(`Failed to load run result (${response.status})`);
       }
@@ -85,6 +95,22 @@ export function App() {
     }
   }
 
+  async function cancelActiveRun() {
+    if (!activeRunId) {
+      return;
+    }
+    try {
+      const response = await apiFetch(`/api/audits/${activeRunId}/cancel`, { method: "POST" });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`Cancel failed ${response.status}: ${body}`);
+      }
+      await loadHistory();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Cancel failed");
+    }
+  }
+
   async function trackRunUntilTerminal(runId: string) {
     if (pollTimerRef.current !== null) {
       window.clearInterval(pollTimerRef.current);
@@ -92,20 +118,22 @@ export function App() {
 
     pollTimerRef.current = window.setInterval(async () => {
       try {
-        const response = await fetch(`${apiBase}/api/audits/${runId}`);
+        const response = await apiFetch(`/api/audits/${runId}`);
         if (!response.ok) {
           throw new Error(`Failed to poll run (${response.status})`);
         }
         const record = (await response.json()) as AuditRecord;
         await loadHistory();
 
-        if (record.status === "completed" || record.status === "failed") {
+        if (["completed", "failed", "canceled"].includes(record.status)) {
           if (pollTimerRef.current !== null) {
             window.clearInterval(pollTimerRef.current);
             pollTimerRef.current = null;
           }
           setActiveRunId(null);
-          await loadRunResult(runId);
+          if (record.status !== "canceled") {
+            await loadRunResult(runId);
+          }
         }
       } catch (pollError) {
         if (pollTimerRef.current !== null) {
@@ -125,9 +153,8 @@ export function App() {
     setResult(null);
 
     try {
-      const response = await fetch(`${apiBase}/api/audits/run-async`, {
+      const response = await apiFetch(`/api/audits/run-async`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repo_url: repoUrl,
           pdf_path: pdfPath,
@@ -198,9 +225,14 @@ export function App() {
               placeholder="audit/report_onself_generated/final_audit_report.md"
             />
           </label>
-          <button type="submit" disabled={loading || activeRunId !== null}>
-            {activeRunId ? "Audit Running..." : loading ? "Submitting..." : "Run Audit"}
-          </button>
+          <div className="actions">
+            <button type="submit" disabled={loading || activeRunId !== null}>
+              {activeRunId ? "Audit Running..." : loading ? "Submitting..." : "Run Audit"}
+            </button>
+            <button type="button" onClick={() => void cancelActiveRun()} disabled={!activeRunId}>
+              Cancel Active Run
+            </button>
+          </div>
         </form>
       </section>
 
