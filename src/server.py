@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -50,7 +52,6 @@ class RuntimeOptionsResponse(BaseModel):
     rubric_presets: list[dict]
 
 
-app = FastAPI(title="Automaton Auditor API", version="0.1.0")
 store = AuditStore()
 job_manager = AuditJobManager(store)
 settings = load_settings()
@@ -59,6 +60,15 @@ security_config = SecurityConfig(
     rate_limit_per_minute=settings.api_rate_limit_per_minute,
 )
 rate_limiter = SlidingWindowRateLimiter(security_config.rate_limit_per_minute)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    job_manager.shutdown(wait=False)
+
+
+app = FastAPI(title="Automaton Auditor API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -70,12 +80,12 @@ app.add_middleware(
 
 
 @app.get("/health")
-def health() -> dict:
+async def health() -> dict:
     return {"status": "ok"}
 
 
 @app.get("/api/runtime/options", response_model=RuntimeOptionsResponse)
-def runtime_options_endpoint() -> RuntimeOptionsResponse:
+async def runtime_options_endpoint() -> RuntimeOptionsResponse:
     return RuntimeOptionsResponse(
         judge_providers=["openai", "anthropic", "ollama"],
         vision_providers=["openai", "anthropic", "ollama"],
@@ -88,14 +98,14 @@ def runtime_options_endpoint() -> RuntimeOptionsResponse:
     )
 
 
-def enforce_api_auth(x_api_key: str | None = Header(default=None)) -> None:
+async def enforce_api_auth(x_api_key: str | None = Header(default=None)) -> None:
     if not security_config.api_auth_key:
         raise HTTPException(status_code=503, detail="API auth key is not configured")
     if not is_api_key_valid(x_api_key, security_config.api_auth_key):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-def enforce_rate_limit(
+async def enforce_rate_limit(
     request: Request,
     response: Response,
     x_api_key: str | None = Header(default=None),
@@ -108,7 +118,7 @@ def enforce_rate_limit(
 
 
 @app.post("/api/audits/run", response_model=AuditRunResponse)
-def run_audit_endpoint(
+async def run_audit_endpoint(
     request: AuditRunRequest,
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
@@ -152,7 +162,7 @@ def run_audit_endpoint(
 
 
 @app.post("/api/audits/run-async", response_model=AuditRunRecordResponse)
-def run_audit_async_endpoint(
+async def run_audit_async_endpoint(
     request: AuditRunRequest,
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
@@ -181,7 +191,7 @@ def run_audit_async_endpoint(
 
 
 @app.get("/api/audits", response_model=list[AuditRunRecordResponse])
-def list_audits_endpoint(
+async def list_audits_endpoint(
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
 ) -> list[AuditRunRecordResponse]:
@@ -190,7 +200,7 @@ def list_audits_endpoint(
 
 
 @app.get("/api/audits/{run_id}", response_model=AuditRunRecordResponse)
-def get_audit_endpoint(
+async def get_audit_endpoint(
     run_id: str,
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
@@ -203,7 +213,7 @@ def get_audit_endpoint(
 
 
 @app.get("/api/audits/{run_id}/result")
-def get_audit_result_endpoint(
+async def get_audit_result_endpoint(
     run_id: str,
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
@@ -222,7 +232,7 @@ def get_audit_result_endpoint(
 
 
 @app.post("/api/audits/{run_id}/cancel", response_model=AuditRunRecordResponse)
-def cancel_audit_endpoint(
+async def cancel_audit_endpoint(
     run_id: str,
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
@@ -235,8 +245,3 @@ def cancel_audit_endpoint(
     if not job_manager.cancel(run_id):
         raise HTTPException(status_code=409, detail="Run is not cancelable")
     return AuditRunRecordResponse(**store.get_run(run_id))
-
-
-@app.on_event("shutdown")
-def on_shutdown() -> None:
-    job_manager.shutdown(wait=False)
