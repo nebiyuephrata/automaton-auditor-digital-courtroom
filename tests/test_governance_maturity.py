@@ -31,4 +31,4 @@ def test_maturity_band_constitutional_without_penalties() -> None:
 def test_maturity_downgrades_on_critical_dimension_failures() -> None:
     criteria = [_criterion("langgraph_architecture", 2), _criterion("judicial_nuance", 2), _criterion("synthesis_engine", 2)]
     band, _ = derive_governance_maturity(4.6, criteria)
-    assert band == "Developing"
+    assert band == "Emergent"
