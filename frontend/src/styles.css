@@ -87,6 +87,26 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.historyList {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.historyItem {
+  text-align: left;
+  display: grid;
+  gap: 0.2rem;
+  background: #e9f2f8;
+  color: #102a43;
+  border: 1px solid #b8cad9;
+  border-radius: 8px;
+  padding: 0.7rem;
+}
+
+.historyItem strong {
+  color: #243b53;
+}
+
 @media (max-width: 640px) {
   .shell {
     padding: 1.25rem 0.8rem 2rem;
