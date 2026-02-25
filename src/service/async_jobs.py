@@ -53,6 +53,10 @@ class AuditJobManager:
                     rendered_markdown="",
                     errors=[str(exc)],
                 )
+            finally:
+                with self._lock:
+                    self._futures.pop(run_id, None)
+                    self._cancel_events.pop(run_id, None)
 
         future = self.executor.submit(_task)
         with self._lock:
@@ -83,6 +87,9 @@ class AuditJobManager:
             self.store.update_status(run_id, "cancel_requested")
             return True
         return False
+
+    def shutdown(self, wait: bool = False) -> None:
+        self.executor.shutdown(wait=wait, cancel_futures=True)
 
     def is_active(self, run_id: str) -> bool:
         with self._lock:

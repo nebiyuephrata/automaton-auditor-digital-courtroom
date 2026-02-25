@@ -1,4 +1,5 @@
 import tempfile
+import time
 
 from src.service.audit_store import AuditStore
 
@@ -52,3 +53,25 @@ def test_audit_store_marks_failed_when_errors_present() -> None:
         record = store.get_run(run_id)
         assert record["status"] == "failed"
         assert record["errors"] == ["failure"]
+
+
+def test_audit_store_lists_runs_by_created_at_desc() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        store = AuditStore(root_dir=tmp)
+        first = store.create_run(
+            repo_url="https://example.com/first.git",
+            pdf_path="reports/final_report.pdf",
+            rubric_path="rubric.json",
+            output_path=None,
+        )
+        time.sleep(0.01)
+        second = store.create_run(
+            repo_url="https://example.com/second.git",
+            pdf_path="reports/final_report.pdf",
+            rubric_path="rubric.json",
+            output_path=None,
+        )
+
+        runs = store.list_runs()
+        assert runs[0]["run_id"] == second
+        assert runs[1]["run_id"] == first

@@ -22,7 +22,7 @@ def load_settings() -> Settings:
         judge_provider=os.getenv("JUDGE_PROVIDER", "openai"),
         judge_model=os.getenv("JUDGE_MODEL", "gpt-4o-mini"),
         api_auth_key=os.getenv("API_AUTH_KEY", ""),
-        api_rate_limit_per_minute=int(os.getenv("API_RATE_LIMIT_PER_MINUTE", "60")),
+        api_rate_limit_per_minute=_int_env("API_RATE_LIMIT_PER_MINUTE", 60, min_value=1),
     )
 
 
@@ -34,5 +34,16 @@ def apply_runtime_settings(settings: Settings) -> None:
     os.environ["API_RATE_LIMIT_PER_MINUTE"] = str(settings.api_rate_limit_per_minute)
     if settings.api_auth_key:
         os.environ["API_AUTH_KEY"] = settings.api_auth_key
+
+
+def _int_env(name: str, default: int, min_value: int = 1) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return default
+    return max(min_value, parsed)
     if settings.langchain_api_key:
         os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
