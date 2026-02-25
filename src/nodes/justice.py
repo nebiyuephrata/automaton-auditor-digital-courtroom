@@ -1,6 +1,6 @@
 from collections import defaultdict
 from statistics import mean
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from src.state import AgentState, AuditReport, CriterionResult, Evidence, JudicialOpinion
 from src.utils.markdown_renderer import render_audit_report
@@ -112,6 +112,7 @@ class ChiefJusticeNode:
             results.append(result)
 
         overall = mean([result.final_score for result in results]) if results else 0.0
+        maturity, maturity_rationale = derive_governance_maturity(overall, results)
         report = AuditReport(
             repo_url=state.get("repo_url", ""),
             executive_summary=(
@@ -119,6 +120,8 @@ class ChiefJusticeNode:
                 "and architectural criteria."
             ),
             overall_score=overall,
+            governance_maturity=maturity,
+            governance_maturity_rationale=maturity_rationale,
             criteria=results,
             remediation_plan="\n".join(f"- {res.remediation}" for res in results),
         )
@@ -128,3 +131,44 @@ class ChiefJusticeNode:
             "final_report": report,
             "rendered_markdown": markdown,
         }
+
+
+def derive_governance_maturity(
+    overall_score: float, criteria: List[CriterionResult]
+) -> tuple[Literal["Emergent", "Developing", "Governed", "Constitutional"], str]:
+    if overall_score < 2.0:
+        band: Literal["Emergent", "Developing", "Governed", "Constitutional"] = "Emergent"
+    elif overall_score < 3.0:
+        band = "Developing"
+    elif overall_score < 4.2:
+        band = "Governed"
+    else:
+        band = "Constitutional"
+
+    architecture = next((c for c in criteria if c.dimension_id == "langgraph_architecture"), None)
+    judicial = next((c for c in criteria if c.dimension_id == "judicial_nuance"), None)
+    synthesis = next((c for c in criteria if c.dimension_id == "synthesis_engine"), None)
+
+    if architecture and architecture.final_score <= 2:
+        band = _downgrade_maturity(band)
+    if judicial and judicial.final_score <= 2:
+        band = _downgrade_maturity(band)
+    if synthesis and synthesis.final_score <= 2:
+        band = _downgrade_maturity(band)
+
+    dissent_count = sum(1 for c in criteria if c.dissent_summary)
+    rationale = (
+        f"Band derived from overall score {overall_score:.2f} with {dissent_count} dissent-triggered "
+        "re-evaluations and constitutional guardrail penalties applied to critical dimensions."
+    )
+    return band, rationale
+
+
+def _downgrade_maturity(
+    band: Literal["Emergent", "Developing", "Governed", "Constitutional"]
+) -> Literal["Emergent", "Developing", "Governed", "Constitutional"]:
+    order = ["Emergent", "Developing", "Governed", "Constitutional"]
+    idx = order.index(band)
+    if idx == 0:
+        return band
+    return order[idx - 1]  # type: ignore[return-value]

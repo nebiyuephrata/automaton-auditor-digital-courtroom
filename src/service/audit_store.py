@@ -1,0 +1,130 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import threading
+from typing import Any, Dict, List
+from uuid import uuid4
+
+
+@dataclass(frozen=True)
+class AuditRunRecord:
+    run_id: str
+    created_at: str
+    repo_url: str
+    pdf_path: str
+    rubric_path: str
+    output_path: str | None
+    status: str
+    overall_score: float | None
+    errors: List[str]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "created_at": self.created_at,
+            "repo_url": self.repo_url,
+            "pdf_path": self.pdf_path,
+            "rubric_path": self.rubric_path,
+            "output_path": self.output_path,
+            "status": self.status,
+            "overall_score": self.overall_score,
+            "errors": self.errors,
+        }
+
+
+class AuditStore:
+    def __init__(self, root_dir: str = "audit/.runs") -> None:
+        self.root = Path(root_dir)
+        self.root.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
+
+    def create_run(
+        self,
+        repo_url: str,
+        pdf_path: str,
+        rubric_path: str,
+        output_path: str | None,
+        status: str = "running",
+    ) -> str:
+        run_id = uuid4().hex
+        record = AuditRunRecord(
+            run_id=run_id,
+            created_at=datetime.now(timezone.utc).isoformat(),
+            repo_url=repo_url,
+            pdf_path=pdf_path,
+            rubric_path=rubric_path,
+            output_path=output_path,
+            status=status,
+            overall_score=None,
+            errors=[],
+        )
+        with self._lock:
+            self._write_json(self._record_path(run_id), record.to_dict())
+        return run_id
+
+    def update_status(self, run_id: str, status: str) -> None:
+        with self._lock:
+            record = self._read_json(self._record_path(run_id))
+            updated = {**record, "status": status}
+            self._write_json(self._record_path(run_id), updated)
+
+    def complete_run(
+        self,
+        run_id: str,
+        final_report: Dict[str, Any] | None,
+        rendered_markdown: str,
+        errors: List[str],
+        status_override: str | None = None,
+    ) -> None:
+        with self._lock:
+            record = self._read_json(self._record_path(run_id))
+            status = status_override or ("failed" if errors else "completed")
+            overall_score = None
+            if final_report is not None:
+                overall_score = final_report.get("overall_score")
+
+            updated = {**record, "status": status, "overall_score": overall_score, "errors": errors}
+            self._write_json(self._record_path(run_id), updated)
+
+            payload = {
+                "run_id": run_id,
+                "rendered_markdown": rendered_markdown,
+                "final_report": final_report,
+                "errors": errors,
+            }
+            self._write_json(self._result_path(run_id), payload)
+
+    def list_runs(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            records: List[Dict[str, Any]] = []
+            for path in self.root.glob("*.record.json"):
+                records.append(self._read_json(path))
+            records.sort(key=lambda rec: rec.get("created_at", ""), reverse=True)
+            return records
+
+    def get_run(self, run_id: str) -> Dict[str, Any]:
+        with self._lock:
+            return self._read_json(self._record_path(run_id))
+
+    def get_result(self, run_id: str) -> Dict[str, Any]:
+        with self._lock:
+            return self._read_json(self._result_path(run_id))
+
+    def _record_path(self, run_id: str) -> Path:
+        return self.root / f"{run_id}.record.json"
+
+    def _result_path(self, run_id: str) -> Path:
+        return self.root / f"{run_id}.result.json"
+
+    @staticmethod
+    def _write_json(path: Path, payload: Dict[str, Any]) -> None:
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    @staticmethod
+    def _read_json(path: Path) -> Dict[str, Any]:
+        if not path.exists():
+            raise FileNotFoundError(path)
+        return json.loads(path.read_text(encoding="utf-8"))

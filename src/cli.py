@@ -3,8 +3,7 @@ import json
 from pathlib import Path
 
 from src.config.logging_config import configure_logging
-from src.graph import create_graph
-from src.utils.rubric_loader import rubric_dimensions
+from src.service.audit_runner import run_audit
 
 
 def main() -> None:
@@ -19,27 +18,18 @@ def main() -> None:
     args = parser.parse_args()
 
     configure_logging()
-
-    app = create_graph()
-    state = {
-        "repo_url": args.repo_url,
-        "pdf_path": args.pdf_path,
-        "rubric_dimensions": rubric_dimensions(args.rubric_path),
-        "evidences": {},
-        "opinions": [],
-        "errors": [],
-    }
-
-    result = app.invoke(state)
+    result = run_audit(
+        repo_url=args.repo_url,
+        pdf_path=args.pdf_path,
+        rubric_path=args.rubric_path,
+        output_path=args.output,
+    )
     rendered = result.get("rendered_markdown", "")
 
-    output = Path(args.output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(rendered, encoding="utf-8")
-
     if "final_report" in result:
+        output = Path(args.output)
         json_path = output.with_suffix(".json")
-        json_path.write_text(result["final_report"].model_dump_json(indent=2), encoding="utf-8")
+        json_path.write_text(json.dumps(result["final_report"], indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":
