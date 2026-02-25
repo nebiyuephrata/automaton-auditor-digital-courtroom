@@ -9,6 +9,26 @@ Detailed architecture and implementation status:
 
 `START -> Detectives (parallel) -> EvidenceAggregator -> Judges (parallel) -> ChiefJustice (deterministic) -> END`
 
+Constitutional architecture mapping (implemented):
+- `START -> Detectives (parallel fan-out)` in [`src/graph.py`](src/graph.py) with:
+  - `repo_investigator`
+  - `doc_analyst`
+  - `vision_inspector`
+- `Fan-in synchronization` in [`src/nodes/aggregator.py`](src/nodes/aggregator.py) via `EvidenceAggregator`
+- `Judges (parallel fan-out)` in [`src/graph.py`](src/graph.py) with:
+  - `prosecutor`
+  - `defense`
+  - `techlead`
+- `Deterministic arbitration` in [`src/nodes/justice.py`](src/nodes/justice.py) via pure Python `ChiefJusticeNode`
+- `Typed merge-safe state` in [`src/state.py`](src/state.py):
+  - Pydantic schemas (`Evidence`, `JudicialOpinion`, `CriterionResult`, `AuditReport`)
+  - `AgentState` TypedDict
+  - reducers: `operator.ior` (`evidences`), `operator.add` (`opinions`, `errors`)
+
+Non-negotiable synthesis rule:
+- Final synthesis is deterministic rule engine logic (not LLM summarization).
+- Judge nodes may use structured LLM output, but arbitration remains pure Python.
+
 ## Setup
 
 ```bash
