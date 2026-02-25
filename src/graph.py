@@ -41,6 +41,10 @@ def error_handler(state: AgentState) -> AgentState:
     return {"errors": state.get("errors", []) + ["graph_routed_to_error_handler"]}
 
 
+def judge_dispatch(state: AgentState) -> AgentState:
+    return state
+
+
 def create_graph():
     builder = StateGraph(AgentState)
 
@@ -54,6 +58,7 @@ def create_graph():
     builder.add_node("techlead", TechLeadNode())
 
     builder.add_node("chief_justice", ChiefJusticeNode())
+    builder.add_node("judge_dispatch", judge_dispatch)
     builder.add_node("error_handler", error_handler)
 
     builder.add_edge(START, "repo_investigator")
@@ -68,13 +73,14 @@ def create_graph():
         "evidence_aggregator",
         route_after_aggregation,
         {
-            "proceed": "prosecutor",
+            "proceed": "judge_dispatch",
             "error": "error_handler",
         },
     )
 
-    builder.add_edge("evidence_aggregator", "defense")
-    builder.add_edge("evidence_aggregator", "techlead")
+    builder.add_edge("judge_dispatch", "prosecutor")
+    builder.add_edge("judge_dispatch", "defense")
+    builder.add_edge("judge_dispatch", "techlead")
 
     builder.add_edge("prosecutor", "chief_justice")
     builder.add_edge("defense", "chief_justice")
