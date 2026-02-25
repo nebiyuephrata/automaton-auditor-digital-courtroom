@@ -2,6 +2,9 @@
 
 Production-grade autonomous governance swarm for forensic repository auditing.
 
+Detailed architecture and implementation status:
+- [docs/architecture.md](docs/architecture.md)
+
 ## Architecture Invariants
 
 `START -> Detectives (parallel) -> EvidenceAggregator -> Judges (parallel) -> ChiefJustice (deterministic) -> END`
