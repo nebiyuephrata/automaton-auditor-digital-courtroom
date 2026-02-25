@@ -18,3 +18,7 @@ def test_graph_contains_stategraph_and_parallel_patterns() -> None:
     assert patterns["has_fan_out"] is True
     assert patterns["has_fan_in"] is True
     assert patterns["conditional_edges"] >= 1
+    edges = set(patterns["edges"])
+    assert ("judge_dispatch", "prosecutor") in edges
+    assert ("judge_dispatch", "defense") in edges
+    assert ("judge_dispatch", "techlead") in edges
