@@ -45,5 +45,6 @@ class DocAnalyst:
 class VisionInspector:
     def __call__(self, state: AgentState) -> Dict[str, Dict[str, List[Evidence]]]:
         pdf_path = state.get("pdf_path", "")
-        evidences = analyze_pdf_diagrams(pdf_path)
+        runtime_config = state.get("runtime_config")
+        evidences = analyze_pdf_diagrams(pdf_path, runtime_config=runtime_config)
         return {"evidences": {"vision": evidences}}

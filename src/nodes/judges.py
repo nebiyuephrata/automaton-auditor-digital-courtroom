@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Protocol
 
-from src.state import AgentState, JudicialOpinion
+from src.state import AgentState, JudicialOpinion, RuntimeLLMConfig
 from src.utils.retry_logic import retry
 
 
@@ -17,26 +16,46 @@ class LLMProtocol(Protocol):
         ...
 
 
-def _load_chat_model() -> Any | None:
-    provider = os.getenv("JUDGE_PROVIDER", "openai").lower()
-    model_name = os.getenv("JUDGE_MODEL", "gpt-4o-mini")
+def _load_chat_model(runtime_config: RuntimeLLMConfig | None = None) -> Any | None:
+    runtime_config = runtime_config or RuntimeLLMConfig()
+    provider = runtime_config.judge_provider.lower()
+    model_name = runtime_config.judge_model
 
     if provider == "anthropic":
         try:
             from langchain_anthropic import ChatAnthropic
         except ImportError:
             return None
-        if not os.getenv("ANTHROPIC_API_KEY"):
+        if not runtime_config.anthropic_api_key:
             return None
-        return ChatAnthropic(model=model_name, temperature=0)
+        return ChatAnthropic(
+            model=model_name,
+            temperature=0,
+            api_key=runtime_config.anthropic_api_key,
+        )
+
+    if provider == "ollama":
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            return None
+        return ChatOllama(
+            model=model_name,
+            temperature=0,
+            base_url=runtime_config.ollama_base_url or "http://localhost:11434",
+        )
 
     try:
         from langchain_openai import ChatOpenAI
     except ImportError:
         return None
-    if not os.getenv("OPENAI_API_KEY"):
+    if not runtime_config.openai_api_key:
         return None
-    return ChatOpenAI(model=model_name, temperature=0)
+    return ChatOpenAI(
+        model=model_name,
+        temperature=0,
+        api_key=runtime_config.openai_api_key,
+    )
 
 
 @dataclass
@@ -112,11 +131,13 @@ class _JudgeBase:
     prompt_file: str
 
     def __init__(self, llm: LLMProtocol | None = None) -> None:
-        self.llm = llm or self._build_default_llm()
+        self.llm = llm
         self.system_prompt = self._load_prompt(self.prompt_file)
 
     def __call__(self, state: AgentState) -> Dict[str, List[JudicialOpinion]]:
-        structured: StructuredJudge = self.llm.with_structured_output(JudicialOpinion)
+        runtime_config = state.get("runtime_config", RuntimeLLMConfig())
+        llm = self.llm or self._build_default_llm(runtime_config)
+        structured: StructuredJudge = llm.with_structured_output(JudicialOpinion)
         dimensions = state.get("rubric_dimensions", [])
         evidence_text = _flatten_evidence(state)
 
@@ -147,8 +168,8 @@ class _JudgeBase:
             )
         return opinion
 
-    def _build_default_llm(self) -> LLMProtocol:
-        model = _load_chat_model()
+    def _build_default_llm(self, runtime_config: RuntimeLLMConfig) -> LLMProtocol:
+        model = _load_chat_model(runtime_config)
         if model is not None:
             return ProviderBackedJudgeLLM(persona=self.judge_name, model=model)
         return DeterministicJudgeLLM(self.judge_name)

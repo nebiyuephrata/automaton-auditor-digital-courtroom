@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 import tempfile
 from typing import Any, Dict, List, Literal
@@ -7,7 +6,7 @@ from typing import Any, Dict, List, Literal
 from pypdf import PdfReader
 from pydantic import BaseModel
 
-from src.state import Evidence
+from src.state import Evidence, RuntimeLLMConfig
 
 
 def extract_images_from_pdf(path: str, output_dir: str) -> List[str]:
@@ -76,8 +75,10 @@ class DiagramFlowAssessment(BaseModel):
     confidence: float
 
 
-def classify_diagram_flow(image_path: str) -> Evidence:
-    model = _load_vision_model()
+def classify_diagram_flow(
+    image_path: str, runtime_config: RuntimeLLMConfig | None = None
+) -> Evidence:
+    model = _load_vision_model(runtime_config=runtime_config)
     if model is None:
         assessment = _heuristic_flow_assessment(image_path)
         return _assessment_to_evidence(image_path, assessment, "heuristic")
@@ -98,7 +99,9 @@ def classify_diagram_flow(image_path: str) -> Evidence:
         return _assessment_to_evidence(image_path, fallback, "fallback")
 
 
-def analyze_pdf_diagrams(pdf_path: str) -> List[Evidence]:
+def analyze_pdf_diagrams(
+    pdf_path: str, runtime_config: RuntimeLLMConfig | None = None
+) -> List[Evidence]:
     with tempfile.TemporaryDirectory(prefix="vision-audit-") as tmp_dir:
         extracted = extract_images_from_pdf(pdf_path, tmp_dir)
         if not extracted:
@@ -112,29 +115,49 @@ def analyze_pdf_diagrams(pdf_path: str) -> List[Evidence]:
                     confidence=0.95,
                 )
             ]
-        return [classify_diagram_flow(image_path) for image_path in extracted]
+        return [classify_diagram_flow(image_path, runtime_config) for image_path in extracted]
 
 
-def _load_vision_model() -> Any | None:
-    provider = os.getenv("VISION_PROVIDER", "openai").lower()
-    model_name = os.getenv("VISION_MODEL", "gpt-4o-mini")
+def _load_vision_model(runtime_config: RuntimeLLMConfig | None = None) -> Any | None:
+    runtime_config = runtime_config or RuntimeLLMConfig()
+    provider = runtime_config.vision_provider.lower()
+    model_name = runtime_config.vision_model
 
     if provider == "anthropic":
         try:
             from langchain_anthropic import ChatAnthropic
         except ImportError:
             return None
-        if not os.getenv("ANTHROPIC_API_KEY"):
+        if not runtime_config.anthropic_api_key:
             return None
-        return ChatAnthropic(model=model_name, temperature=0)
+        return ChatAnthropic(
+            model=model_name,
+            temperature=0,
+            api_key=runtime_config.anthropic_api_key,
+        )
+
+    if provider == "ollama":
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            return None
+        return ChatOllama(
+            model=model_name,
+            temperature=0,
+            base_url=runtime_config.ollama_base_url or "http://localhost:11434",
+        )
 
     try:
         from langchain_openai import ChatOpenAI
     except ImportError:
         return None
-    if not os.getenv("OPENAI_API_KEY"):
+    if not runtime_config.openai_api_key:
         return None
-    return ChatOpenAI(model=model_name, temperature=0)
+    return ChatOpenAI(
+        model=model_name,
+        temperature=0,
+        api_key=runtime_config.openai_api_key,
+    )
 
 
 def _analyze_with_model(model: Any, image_path: str, prompt: str) -> DiagramFlowAssessment:

@@ -71,7 +71,7 @@ def test_doc_analyst_returns_docs_bucket(monkeypatch) -> None:
 def test_vision_inspector_returns_vision_bucket(monkeypatch) -> None:
     monkeypatch.setattr(
         "src.nodes.detectives.analyze_pdf_diagrams",
-        lambda _pdf: [
+        lambda _pdf, runtime_config=None: [
             Evidence(
                 goal="Swarm Visual Flow Analysis",
                 found=True,

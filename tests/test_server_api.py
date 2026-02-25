@@ -12,7 +12,16 @@ class ImmediateJobManager:
     def __init__(self, store: AuditStore) -> None:
         self.store = store
 
-    def submit(self, run_id: str, repo_url: str, pdf_path: str, rubric_path: str, output_path: str | None) -> None:
+    def submit(
+        self,
+        run_id: str,
+        repo_url: str,
+        pdf_path: str,
+        rubric_path: str,
+        output_path: str | None,
+        rubric_preset: str | None = None,
+        runtime_config=None,
+    ) -> None:
         self.store.complete_run(
             run_id=run_id,
             final_report={"overall_score": 4.0},
