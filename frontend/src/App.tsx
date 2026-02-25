@@ -45,6 +45,178 @@ type RuntimeOptions = {
   rubric_presets: RubricPreset[];
 };
 
+type Locale = "en" | "am";
+type ThemeMode = "light" | "dark";
+
+type Translation = {
+  appTitle: string;
+  appKicker: string;
+  mode: string;
+  language: string;
+  english: string;
+  amharic: string;
+  darkMode: string;
+  lightMode: string;
+  auditInput: string;
+  repositoryUrl: string;
+  pdfPath: string;
+  useDefaultRubric: string;
+  rubricPreset: string;
+  rubricPath: string;
+  outputPath: string;
+  runtimeSettings: string;
+  judgeProvider: string;
+  judgeModel: string;
+  visionProvider: string;
+  visionModel: string;
+  openaiKey: string;
+  anthropicKey: string;
+  ollamaUrl: string;
+  runAudit: string;
+  submitting: string;
+  running: string;
+  cancelRun: string;
+  auditHistory: string;
+  loadingHistory: string;
+  noRunsYet: string;
+  score: string;
+  output: string;
+  noRunSelected: string;
+  runInProgress: string;
+  runId: string;
+  executionErrors: string;
+  markdownReport: string;
+  reportJson: string;
+  dismiss: string;
+  apiUnauthorized: string;
+  apiForbidden: string;
+  apiRateLimited: string;
+  apiUnavailable: string;
+  apiConflict: string;
+  apiServerError: string;
+  apiGenericError: string;
+  networkError: string;
+  loadRuntimeFailed: string;
+  loadHistoryFailed: string;
+  loadResultFailed: string;
+  cancelFailed: string;
+  submitFailed: string;
+  pollingFailed: string;
+};
+
+const copy: Record<Locale, Translation> = {
+  en: {
+    appTitle: "Digital Courtroom Console",
+    appKicker: "Automaton Auditor",
+    mode: "Mode",
+    language: "Language",
+    english: "English",
+    amharic: "Amharic",
+    darkMode: "Dark",
+    lightMode: "Light",
+    auditInput: "Audit Input",
+    repositoryUrl: "Repository URL",
+    pdfPath: "PDF Path",
+    useDefaultRubric: "Use default rubric preset",
+    rubricPreset: "Rubric Preset",
+    rubricPath: "Rubric Path",
+    outputPath: "Output Path",
+    runtimeSettings: "Runtime LLM Settings",
+    judgeProvider: "Judge Provider",
+    judgeModel: "Judge Model",
+    visionProvider: "Vision Provider",
+    visionModel: "Vision Model",
+    openaiKey: "OpenAI API Key (optional)",
+    anthropicKey: "Anthropic API Key (optional)",
+    ollamaUrl: "Ollama Base URL (optional)",
+    runAudit: "Run Audit",
+    submitting: "Submitting...",
+    running: "Audit Running...",
+    cancelRun: "Cancel Active Run",
+    auditHistory: "Audit History",
+    loadingHistory: "Loading history...",
+    noRunsYet: "No runs yet.",
+    score: "Score",
+    output: "Output",
+    noRunSelected: "No audit run selected.",
+    runInProgress: "Run is in progress. Polling status...",
+    runId: "Run ID",
+    executionErrors: "Execution Errors",
+    markdownReport: "Markdown Report",
+    reportJson: "Structured Report JSON",
+    dismiss: "Dismiss",
+    apiUnauthorized: "Authentication failed. Check API key configuration.",
+    apiForbidden: "Access denied for this request.",
+    apiRateLimited: "Too many requests. Please wait and retry.",
+    apiUnavailable: "Service is unavailable. Ensure API auth key is configured.",
+    apiConflict: "Run is not complete yet. Please wait for terminal status.",
+    apiServerError: "Server error occurred. Check backend logs and retry.",
+    apiGenericError: "Request failed.",
+    networkError: "Cannot reach API server. Verify backend URL and connectivity.",
+    loadRuntimeFailed: "Failed to load runtime options.",
+    loadHistoryFailed: "Failed to load audit history.",
+    loadResultFailed: "Failed to load audit result.",
+    cancelFailed: "Failed to cancel active run.",
+    submitFailed: "Failed to submit audit run.",
+    pollingFailed: "Failed while polling run status."
+  },
+  am: {
+    appTitle: "ዲጂታል ፍርድ ቤት ኮንሶል",
+    appKicker: "አውቶማቶን ኦዲተር",
+    mode: "ሞድ",
+    language: "ቋንቋ",
+    english: "እንግሊዝኛ",
+    amharic: "አማርኛ",
+    darkMode: "ጨለማ",
+    lightMode: "ብርሃን",
+    auditInput: "የኦዲት ግቤት",
+    repositoryUrl: "የሪፖዚቶሪ URL",
+    pdfPath: "የPDF መንገድ",
+    useDefaultRubric: "ነባሪ ሩብሪክ ይጠቀሙ",
+    rubricPreset: "የሩብሪክ ቅድመ-ቅንብር",
+    rubricPath: "የሩብሪክ መንገድ",
+    outputPath: "የውጤት መንገድ",
+    runtimeSettings: "የLLM አሂድ ቅንብሮች",
+    judgeProvider: "የዳኛ ፕሮቫይደር",
+    judgeModel: "የዳኛ ሞዴል",
+    visionProvider: "የራዕይ ፕሮቫይደር",
+    visionModel: "የራዕይ ሞዴል",
+    openaiKey: "OpenAI API ቁልፍ (አማራጭ)",
+    anthropicKey: "Anthropic API ቁልፍ (አማራጭ)",
+    ollamaUrl: "Ollama Base URL (አማራጭ)",
+    runAudit: "ኦዲት አስኪድ",
+    submitting: "በመላክ ላይ...",
+    running: "ኦዲት በመስራት ላይ...",
+    cancelRun: "እየሄደ ያለውን አቁም",
+    auditHistory: "የኦዲት ታሪክ",
+    loadingHistory: "ታሪክ በመጫን ላይ...",
+    noRunsYet: "እስካሁን ሩጫ የለም።",
+    score: "ውጤት",
+    output: "ውጤት",
+    noRunSelected: "የተመረጠ ኦዲት የለም።",
+    runInProgress: "ሩጫ በሂደት ላይ ነው። ሁኔታ እየተመረመረ ነው...",
+    runId: "የሩጫ መለያ",
+    executionErrors: "የአስኬድ ስህተቶች",
+    markdownReport: "ማርክዳውን ሪፖርት",
+    reportJson: "የተዋቀረ JSON ሪፖርት",
+    dismiss: "ዝጋ",
+    apiUnauthorized: "ማረጋገጫ አልተሳካም። API key ያረጋግጡ።",
+    apiForbidden: "ይህን ጥያቄ ለማድረግ ፍቃድ የለዎትም።",
+    apiRateLimited: "ብዙ ጥያቄዎች ተልከዋል። ትንሽ ጊዜ ጠብቀው ይሞክሩ።",
+    apiUnavailable: "አገልግሎቱ አልተገኘም። API_AUTH_KEY ተዘጋጅቶ እንዳለ ያረጋግጡ።",
+    apiConflict: "ሩጫው ገና አልጨረሰም። የመጨረሻ ሁኔታ ይጠብቁ።",
+    apiServerError: "የሰርቨር ስህተት ተከስቷል። የbackend ሎግ ይመልከቱ።",
+    apiGenericError: "ጥያቄው አልተሳካም።",
+    networkError: "API ሰርቨር አልተደረሰበትም። URL እና ግንኙነት ያረጋግጡ።",
+    loadRuntimeFailed: "የruntime አማራጮችን መጫን አልተሳካም።",
+    loadHistoryFailed: "የኦዲት ታሪክን መጫን አልተሳካም።",
+    loadResultFailed: "የኦዲት ውጤትን መጫን አልተሳካም።",
+    cancelFailed: "እየሄደ ያለውን ሩጫ ማቆም አልተሳካም።",
+    submitFailed: "ኦዲት ማስጀመር አልተሳካም።",
+    pollingFailed: "ሁኔታ ሲመረመር ስህተት ተፈጠረ።"
+  }
+};
+
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const apiKey = import.meta.env.VITE_API_KEY ?? "change-me";
 
@@ -57,7 +229,47 @@ async function apiFetch(path: string, init: RequestInit = {}) {
   return fetch(`${apiBase}${path}`, { ...init, headers });
 }
 
+async function readErrorDetail(response: Response): Promise<string> {
+  const text = await response.text();
+  if (!text) {
+    return "";
+  }
+  try {
+    const payload = JSON.parse(text) as { detail?: string };
+    return payload.detail ?? text;
+  } catch {
+    return text;
+  }
+}
+
+function mapApiError(t: Translation, status: number, detail: string): string {
+  if (status === 401) return t.apiUnauthorized;
+  if (status === 403) return t.apiForbidden;
+  if (status === 409) return t.apiConflict;
+  if (status === 429) return t.apiRateLimited;
+  if (status === 503) return t.apiUnavailable;
+  if (status >= 500) return t.apiServerError;
+  return `${t.apiGenericError} (${status})${detail ? `: ${detail}` : ""}`;
+}
+
+function mapUnknownError(t: Translation, fallback: string, error: unknown): string {
+  if (error instanceof TypeError) {
+    return t.networkError;
+  }
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+  return fallback;
+}
+
 export function App() {
+  const [locale, setLocale] = useState<Locale>(() =>
+    (localStorage.getItem("ui_locale") as Locale) || "en"
+  );
+  const [theme, setTheme] = useState<ThemeMode>(() =>
+    (localStorage.getItem("ui_theme") as ThemeMode) || "light"
+  );
+
   const [repoUrl, setRepoUrl] = useState("");
   const [pdfPath, setPdfPath] = useState("reports/final_report.pdf");
   const [rubricPath, setRubricPath] = useState("rubric.json");
@@ -82,6 +294,7 @@ export function App() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
   const pollTimerRef = useRef<number | null>(null);
+  const t = copy[locale];
 
   const reportJson = useMemo(() => {
     if (!result?.final_report) {
@@ -90,11 +303,21 @@ export function App() {
     return JSON.stringify(result.final_report, null, 2);
   }, [result]);
 
+  useEffect(() => {
+    localStorage.setItem("ui_locale", locale);
+  }, [locale]);
+
+  useEffect(() => {
+    localStorage.setItem("ui_theme", theme);
+    document.body.dataset.theme = theme;
+  }, [theme]);
+
   async function loadRuntimeOptions() {
     try {
       const response = await apiFetch("/api/runtime/options");
       if (!response.ok) {
-        throw new Error(`Failed to load runtime options (${response.status})`);
+        const detail = await readErrorDetail(response);
+        throw new Error(mapApiError(t, response.status, detail));
       }
       const payload = (await response.json()) as RuntimeOptions;
       setRuntimeOptions(payload);
@@ -106,7 +329,7 @@ export function App() {
         setRubricPreset(payload.rubric_presets[0].id);
       }
     } catch (runtimeError) {
-      setError(runtimeError instanceof Error ? runtimeError.message : "Failed to load runtime options");
+      setError(mapUnknownError(t, t.loadRuntimeFailed, runtimeError));
     }
   }
 
@@ -115,12 +338,13 @@ export function App() {
     try {
       const response = await apiFetch(`/api/audits`);
       if (!response.ok) {
-        throw new Error(`Failed to load history (${response.status})`);
+        const detail = await readErrorDetail(response);
+        throw new Error(mapApiError(t, response.status, detail));
       }
       const payload = (await response.json()) as AuditRecord[];
       setHistory(payload);
     } catch (historyError) {
-      setError(historyError instanceof Error ? historyError.message : "Failed to load history");
+      setError(mapUnknownError(t, t.loadHistoryFailed, historyError));
     } finally {
       setHistoryLoading(false);
     }
@@ -157,17 +381,14 @@ export function App() {
     setError(null);
     try {
       const response = await apiFetch(`/api/audits/${runId}/result`);
-      if (response.status === 409) {
-        setError(`Run ${runId} is not complete yet.`);
-        return;
-      }
       if (!response.ok) {
-        throw new Error(`Failed to load run result (${response.status})`);
+        const detail = await readErrorDetail(response);
+        throw new Error(mapApiError(t, response.status, detail));
       }
       const payload = (await response.json()) as AuditResponse;
       setResult(payload);
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Unknown error");
+      setError(mapUnknownError(t, t.loadResultFailed, runError));
     } finally {
       setLoading(false);
     }
@@ -180,12 +401,12 @@ export function App() {
     try {
       const response = await apiFetch(`/api/audits/${activeRunId}/cancel`, { method: "POST" });
       if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`Cancel failed ${response.status}: ${body}`);
+        const detail = await readErrorDetail(response);
+        throw new Error(mapApiError(t, response.status, detail));
       }
       await loadHistory();
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : "Cancel failed");
+      setError(mapUnknownError(t, t.cancelFailed, cancelError));
     }
   }
 
@@ -198,7 +419,8 @@ export function App() {
       try {
         const response = await apiFetch(`/api/audits/${runId}`);
         if (!response.ok) {
-          throw new Error(`Failed to poll run (${response.status})`);
+          const detail = await readErrorDetail(response);
+          throw new Error(mapApiError(t, response.status, detail));
         }
         const record = (await response.json()) as AuditRecord;
         await loadHistory();
@@ -219,7 +441,7 @@ export function App() {
           pollTimerRef.current = null;
         }
         setActiveRunId(null);
-        setError(pollError instanceof Error ? pollError.message : "Polling failed");
+        setError(mapUnknownError(t, t.pollingFailed, pollError));
       }
     }, 1500);
   }
@@ -254,8 +476,8 @@ export function App() {
       });
 
       if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`API ${response.status}: ${body}`);
+        const detail = await readErrorDetail(response);
+        throw new Error(mapApiError(t, response.status, detail));
       }
 
       const payload = (await response.json()) as AuditRecord;
@@ -263,24 +485,42 @@ export function App() {
       await loadHistory();
       await trackRunUntilTerminal(payload.run_id);
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Unknown error");
+      setError(mapUnknownError(t, t.submitFailed, runError));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="shell">
-      <header>
-        <p className="kicker">Automaton Auditor</p>
-        <h1>Digital Courtroom Console</h1>
+    <main className={`shell theme-${theme}`}>
+      <header className="headerTop">
+        <div>
+          <p className="kicker">{t.appKicker}</p>
+          <h1>{t.appTitle}</h1>
+        </div>
+        <div className="controlsBar">
+          <label>
+            {t.language}
+            <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>
+              <option value="en">{t.english}</option>
+              <option value="am">{t.amharic}</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+          >
+            {t.mode}: {theme === "light" ? t.lightMode : t.darkMode}
+          </button>
+        </div>
       </header>
 
       <section className="panel">
-        <h2>Audit Input</h2>
+        <h2>{t.auditInput}</h2>
         <form className="grid" onSubmit={onRunAudit}>
           <label>
-            Repository URL
+            {t.repositoryUrl}
             <input
               required
               value={repoUrl}
@@ -289,7 +529,7 @@ export function App() {
             />
           </label>
           <label>
-            PDF Path
+            {t.pdfPath}
             <input
               required
               value={pdfPath}
@@ -304,12 +544,12 @@ export function App() {
                 checked={useRubricPreset}
                 onChange={(event) => setUseRubricPreset(event.target.checked)}
               />
-              Use default rubric preset
+              {t.useDefaultRubric}
             </label>
           </div>
           {useRubricPreset ? (
             <label>
-              Rubric Preset
+              {t.rubricPreset}
               <select value={rubricPreset} onChange={(event) => setRubricPreset(event.target.value)}>
                 {(runtimeOptions?.rubric_presets ?? []).map((preset) => (
                   <option key={preset.id} value={preset.id}>
@@ -320,7 +560,7 @@ export function App() {
             </label>
           ) : (
             <label>
-              Rubric Path
+              {t.rubricPath}
               <input
                 required
                 value={rubricPath}
@@ -330,7 +570,7 @@ export function App() {
             </label>
           )}
           <label>
-            Output Path
+            {t.outputPath}
             <input
               required
               value={outputPath}
@@ -339,9 +579,9 @@ export function App() {
             />
           </label>
 
-          <h3>Runtime LLM Settings</h3>
+          <h3>{t.runtimeSettings}</h3>
           <label>
-            Judge Provider
+            {t.judgeProvider}
             <select value={judgeProvider} onChange={(event) => setJudgeProvider(event.target.value)}>
               {(runtimeOptions?.judge_providers ?? ["openai", "anthropic", "ollama"]).map((provider) => (
                 <option key={provider} value={provider}>
@@ -351,11 +591,15 @@ export function App() {
             </select>
           </label>
           <label>
-            Judge Model
-            <input value={judgeModel} onChange={(event) => setJudgeModel(event.target.value)} placeholder="gpt-4o-mini" />
+            {t.judgeModel}
+            <input
+              value={judgeModel}
+              onChange={(event) => setJudgeModel(event.target.value)}
+              placeholder="gpt-4o-mini"
+            />
           </label>
           <label>
-            Vision Provider
+            {t.visionProvider}
             <select value={visionProvider} onChange={(event) => setVisionProvider(event.target.value)}>
               {(runtimeOptions?.vision_providers ?? ["openai", "anthropic", "ollama"]).map((provider) => (
                 <option key={provider} value={provider}>
@@ -365,11 +609,15 @@ export function App() {
             </select>
           </label>
           <label>
-            Vision Model
-            <input value={visionModel} onChange={(event) => setVisionModel(event.target.value)} placeholder="gpt-4o-mini" />
+            {t.visionModel}
+            <input
+              value={visionModel}
+              onChange={(event) => setVisionModel(event.target.value)}
+              placeholder="gpt-4o-mini"
+            />
           </label>
           <label>
-            OpenAI API Key (optional)
+            {t.openaiKey}
             <input
               type="password"
               value={openAiApiKey}
@@ -378,7 +626,7 @@ export function App() {
             />
           </label>
           <label>
-            Anthropic API Key (optional)
+            {t.anthropicKey}
             <input
               type="password"
               value={anthropicApiKey}
@@ -387,7 +635,7 @@ export function App() {
             />
           </label>
           <label>
-            Ollama Base URL (optional)
+            {t.ollamaUrl}
             <input
               value={ollamaBaseUrl}
               onChange={(event) => setOllamaBaseUrl(event.target.value)}
@@ -397,19 +645,19 @@ export function App() {
 
           <div className="actions">
             <button type="submit" disabled={loading || activeRunId !== null}>
-              {activeRunId ? "Audit Running..." : loading ? "Submitting..." : "Run Audit"}
+              {activeRunId ? t.running : loading ? t.submitting : t.runAudit}
             </button>
-            <button type="button" onClick={() => void cancelActiveRun()} disabled={!activeRunId}>
-              Cancel Active Run
+            <button type="button" className="secondary" onClick={() => void cancelActiveRun()} disabled={!activeRunId}>
+              {t.cancelRun}
             </button>
           </div>
         </form>
       </section>
 
       <section className="panel">
-        <h2>Audit History</h2>
-        {historyLoading && <p>Loading history...</p>}
-        {!historyLoading && history.length === 0 && <p>No runs yet.</p>}
+        <h2>{t.auditHistory}</h2>
+        {historyLoading && <p>{t.loadingHistory}</p>}
+        {!historyLoading && history.length === 0 && <p>{t.noRunsYet}</p>}
         {history.length > 0 && (
           <div className="historyList">
             {history.map((item) => (
@@ -422,7 +670,7 @@ export function App() {
                 <strong>{item.status.toUpperCase()}</strong>
                 <span>{item.repo_url}</span>
                 <span>{new Date(item.created_at).toLocaleString()}</span>
-                <span>Score: {item.overall_score ?? "N/A"}</span>
+                <span>{t.score}: {item.overall_score ?? "N/A"}</span>
               </button>
             ))}
           </div>
@@ -430,18 +678,25 @@ export function App() {
       </section>
 
       <section className="panel">
-        <h2>Output</h2>
-        {error && <p className="error">{error}</p>}
-        {!error && activeRunId && <p>Run {activeRunId} is in progress. Polling status...</p>}
-        {!error && !activeRunId && !result && <p>No audit run selected.</p>}
+        <h2>{t.output}</h2>
+        {error && (
+          <div className="errorBanner">
+            <span>{error}</span>
+            <button type="button" className="secondary" onClick={() => setError(null)}>
+              {t.dismiss}
+            </button>
+          </div>
+        )}
+        {!error && activeRunId && <p>{t.runInProgress}</p>}
+        {!error && !activeRunId && !result && <p>{t.noRunSelected}</p>}
         {result && (
           <>
             <p>
-              <strong>Run ID:</strong> {result.run_id}
+              <strong>{t.runId}:</strong> {result.run_id}
             </p>
             {result.errors && result.errors.length > 0 && (
               <div>
-                <h3>Execution Errors</h3>
+                <h3>{t.executionErrors}</h3>
                 <ul>
                   {result.errors.map((item) => (
                     <li key={item}>{item}</li>
@@ -449,11 +704,11 @@ export function App() {
                 </ul>
               </div>
             )}
-            <h3>Markdown Report</h3>
+            <h3>{t.markdownReport}</h3>
             <pre className="output">{result.rendered_markdown}</pre>
             {reportJson && (
               <>
-                <h3>Structured Report JSON</h3>
+                <h3>{t.reportJson}</h3>
                 <pre className="output">{reportJson}</pre>
               </>
             )}
