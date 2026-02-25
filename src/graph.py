@@ -8,25 +8,11 @@ from src.state import AgentState
 
 try:
     from langgraph.graph import END, START, StateGraph
-except Exception:  # pragma: no cover
-    START = "__start__"
+except Exception as exc:  # pragma: no cover
     END = "__end__"
-
-    class StateGraph:  # type: ignore[override]
-        def __init__(self, *args, **kwargs):
-            self.nodes = {}
-
-        def add_node(self, name, fn):
-            self.nodes[name] = fn
-
-        def add_edge(self, src, dst):
-            return None
-
-        def add_conditional_edges(self, src, router, mapping):
-            return None
-
-        def compile(self):
-            return self
+    START = "__start__"
+    StateGraph = None  # type: ignore[assignment]
+    LANGGRAPH_IMPORT_ERROR = exc
 
 
 def route_after_aggregation(state: AgentState) -> Literal["proceed", "error"]:
@@ -46,6 +32,12 @@ def judge_dispatch(state: AgentState) -> AgentState:
 
 
 def create_graph():
+    if StateGraph is None:
+        raise RuntimeError(
+            "LangGraph is required to build the governance graph. "
+            "Install dependencies and retry."
+        ) from LANGGRAPH_IMPORT_ERROR
+
     builder = StateGraph(AgentState)
 
     builder.add_node("repo_investigator", RepoInvestigator())
