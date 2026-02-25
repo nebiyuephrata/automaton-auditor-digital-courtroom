@@ -38,6 +38,17 @@ Security:
 - Sliding-window rate limit is enforced per caller via `API_RATE_LIMIT_PER_MINUTE`.
 - If `API_AUTH_KEY` is not configured, audit endpoints return `503` by design.
 
+Governance scoring:
+- Chief Justice computes deterministic `governance_maturity` bands:
+  `Emergent`, `Developing`, `Governed`, `Constitutional`.
+- Critical-dimension failures (`langgraph_architecture`, `judicial_nuance`, `synthesis_engine`)
+  apply downgrade penalties.
+
+Vision analysis:
+- VisionInspector extracts images directly from the submitted PDF.
+- It attempts multimodal structured classification of required courtroom flow.
+- If no multimodal model is configured, it records heuristic analysis with explicit confidence.
+
 ## Run Frontend
 
 ```bash
