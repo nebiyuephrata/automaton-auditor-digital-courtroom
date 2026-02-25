@@ -1,9 +1,22 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type AuditResponse = {
+  run_id: string;
   rendered_markdown: string;
   final_report?: Record<string, unknown>;
   errors?: string[];
+};
+
+type AuditRecord = {
+  run_id: string;
+  created_at: string;
+  repo_url: string;
+  pdf_path: string;
+  rubric_path: string;
+  output_path?: string;
+  status: string;
+  overall_score?: number;
+  errors: string[];
 };
 
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -15,8 +28,10 @@ export function App() {
   const [outputPath, setOutputPath] = useState("audit/report_onself_generated/final_audit_report.md");
 
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResponse | null>(null);
+  const [history, setHistory] = useState<AuditRecord[]>([]);
 
   const reportJson = useMemo(() => {
     if (!result?.final_report) {
@@ -24,6 +39,43 @@ export function App() {
     }
     return JSON.stringify(result.final_report, null, 2);
   }, [result]);
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(`${apiBase}/api/audits`);
+      if (!response.ok) {
+        throw new Error(`Failed to load history (${response.status})`);
+      }
+      const payload = (await response.json()) as AuditRecord[];
+      setHistory(payload);
+    } catch (historyError) {
+      setError(historyError instanceof Error ? historyError.message : "Failed to load history");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadHistory();
+  }, []);
+
+  async function loadRunResult(runId: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${apiBase}/api/audits/${runId}/result`);
+      if (!response.ok) {
+        throw new Error(`Failed to load run result (${response.status})`);
+      }
+      const payload = (await response.json()) as AuditResponse;
+      setResult(payload);
+    } catch (runError) {
+      setError(runError instanceof Error ? runError.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function onRunAudit(event: FormEvent) {
     event.preventDefault();
@@ -49,6 +101,7 @@ export function App() {
 
       const payload = (await response.json()) as AuditResponse;
       setResult(payload);
+      await loadHistory();
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Unknown error");
     } finally {
@@ -109,11 +162,35 @@ export function App() {
       </section>
 
       <section className="panel">
+        <h2>Audit History</h2>
+        {historyLoading && <p>Loading history...</p>}
+        {!historyLoading && history.length === 0 && <p>No runs yet.</p>}
+        {history.length > 0 && (
+          <div className="historyList">
+            {history.map((item) => (
+              <button
+                type="button"
+                key={item.run_id}
+                className="historyItem"
+                onClick={() => void loadRunResult(item.run_id)}
+              >
+                <strong>{item.status.toUpperCase()}</strong>
+                <span>{item.repo_url}</span>
+                <span>{new Date(item.created_at).toLocaleString()}</span>
+                <span>Score: {item.overall_score ?? "N/A"}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
         <h2>Output</h2>
         {error && <p className="error">{error}</p>}
-        {!error && !result && <p>No audit run yet.</p>}
+        {!error && !result && <p>No audit run selected.</p>}
         {result && (
           <>
+            <p><strong>Run ID:</strong> {result.run_id}</p>
             {result.errors && result.errors.length > 0 && (
               <div>
                 <h3>Execution Errors</h3>
