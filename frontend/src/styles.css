@@ -1,0 +1,74 @@
+:root {
+  color: #102a43;
+  background: radial-gradient(circle at top left, #e4f5ff 0%, #f9fbff 45%, #eef6f9 100%);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  min-height: 100vh;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+}
+
+.kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: #486581;
+}
+
+h1 {
+  margin: 0.25rem 0 1.5rem;
+  font-size: 2rem;
+}
+
+.panel {
+  background: #ffffffdd;
+  border: 1px solid #c7d7e2;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+input {
+  border: 1px solid #9fb3c8;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.7rem 0.95rem;
+  background: #334e68;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: 1.25rem 0.8rem 2rem;
+  }
+}
