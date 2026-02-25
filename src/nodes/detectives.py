@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from src.state import AgentState, Evidence
 from src.tools.doc_tools import analyze_document
-from src.tools.pdf_image_tools import classify_diagram
+from src.tools.pdf_image_tools import analyze_pdf_diagrams
 from src.tools.repo_tools import analyze_graph_structure, clone_repo, extract_git_history
 
 
@@ -44,23 +44,6 @@ class DocAnalyst:
 
 class VisionInspector:
     def __call__(self, state: AgentState) -> Dict[str, Dict[str, List[Evidence]]]:
-        docs = state.get("evidences", {}).get("docs", [])
-        diagram_paths = [ev.content for ev in docs if ev.content and ev.content.endswith((".png", ".jpg", ".jpeg"))]
-
-        evidences: List[Evidence] = []
-        for path in diagram_paths:
-            evidences.append(classify_diagram(path))
-
-        if not evidences:
-            evidences = [
-                Evidence(
-                    goal="Swarm Visual Classification",
-                    found=False,
-                    content=None,
-                    location=state.get("pdf_path", ""),
-                    rationale="No extracted image paths were available for classification.",
-                    confidence=0.9,
-                )
-            ]
-
+        pdf_path = state.get("pdf_path", "")
+        evidences = analyze_pdf_diagrams(pdf_path)
         return {"evidences": {"vision": evidences}}

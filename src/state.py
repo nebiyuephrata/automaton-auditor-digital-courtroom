@@ -35,6 +35,13 @@ class AuditReport(BaseModel):
     repo_url: str
     executive_summary: str
     overall_score: float
+    governance_maturity: Literal[
+        "Emergent",
+        "Developing",
+        "Governed",
+        "Constitutional",
+    ]
+    governance_maturity_rationale: str
     criteria: List[CriterionResult]
     remediation_plan: str
 

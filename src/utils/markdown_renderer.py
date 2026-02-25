@@ -9,6 +9,8 @@ def render_audit_report(report: AuditReport) -> str:
     lines.append(report.executive_summary)
     lines.append("")
     lines.append(f"Overall Score: **{report.overall_score:.2f}/5.00**")
+    lines.append(f"Governance Maturity: **{report.governance_maturity}**")
+    lines.append(f"Maturity Rationale: {report.governance_maturity_rationale}")
     lines.append("")
     lines.append("## Criterion Breakdown")
 
