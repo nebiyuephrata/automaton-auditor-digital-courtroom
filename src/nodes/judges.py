@@ -71,7 +71,10 @@ class DeterministicJudgeLLM:
         cid = criterion["id"]
 
         has_linear = "linear" in evidence_text.lower() and "fan-out" not in evidence_text.lower()
-        has_security = "os.system" in evidence_text.lower()
+        has_security = any(
+            marker in evidence_text.lower()
+            for marker in ("unsafe shell", "shell execution", "command injection")
+        )
 
         if self.persona == "Prosecutor":
             score = 1 if (has_linear or has_security) else 3

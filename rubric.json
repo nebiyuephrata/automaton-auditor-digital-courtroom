@@ -24,7 +24,7 @@
       "name": "Forensic Accuracy",
       "target_artifact": "repo",
       "forensic_instruction": "Use AST parsing and safe subprocess tooling in temp directories.",
-      "judicial_logic": "Penalize regex-only structural validation and unsafe os.system patterns."
+      "judicial_logic": "Penalize regex-only structural validation and unsafe shell execution patterns."
     },
     {
       "id": "documentation_depth",

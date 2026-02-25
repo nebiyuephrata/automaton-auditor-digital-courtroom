@@ -31,9 +31,22 @@ Non-negotiable synthesis rule:
 
 ## Setup
 
+Requirements:
+- Python `3.11+` (project tested on `3.12`)
+- Node.js `18+` for frontend
+- Linux/macOS shell environment (Windows users should run in WSL)
+
 ```bash
 uv sync
 cp .env.example .env
+```
+
+Dependency locking:
+- `uv.lock` is committed and should be used for reproducible installs.
+- Refresh lock after dependency changes:
+
+```bash
+uv lock
 ```
 
 ## Run CLI
@@ -72,6 +85,13 @@ Vision analysis:
 - VisionInspector extracts images directly from the submitted PDF.
 - It attempts multimodal structured classification of required courtroom flow.
 - If no multimodal model is configured, it records heuristic analysis with explicit confidence.
+
+PDF forensic query interface:
+- `src/tools/doc_tools.py` provides a queryable chunk index:
+  - `build_chunk_index`
+  - `query_chunk_index`
+  - `query_pdf_chunks`
+- This supports targeted questions over extracted PDF chunks, not only batch analysis.
 
 Runtime model switching:
 - Request-level runtime config supports `openai`, `anthropic`, and `ollama`.

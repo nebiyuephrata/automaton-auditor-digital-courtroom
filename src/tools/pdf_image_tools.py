@@ -102,20 +102,32 @@ def classify_diagram_flow(
 def analyze_pdf_diagrams(
     pdf_path: str, runtime_config: RuntimeLLMConfig | None = None
 ) -> List[Evidence]:
-    with tempfile.TemporaryDirectory(prefix="vision-audit-") as tmp_dir:
-        extracted = extract_images_from_pdf(pdf_path, tmp_dir)
-        if not extracted:
-            return [
-                Evidence(
-                    goal="Swarm Visual Flow Analysis",
-                    found=False,
-                    content=None,
-                    location=pdf_path,
-                    rationale="No extractable images were found in the PDF for vision analysis.",
-                    confidence=0.95,
-                )
-            ]
-        return [classify_diagram_flow(image_path, runtime_config) for image_path in extracted]
+    try:
+        with tempfile.TemporaryDirectory(prefix="vision-audit-") as tmp_dir:
+            extracted = extract_images_from_pdf(pdf_path, tmp_dir)
+            if not extracted:
+                return [
+                    Evidence(
+                        goal="Swarm Visual Flow Analysis",
+                        found=False,
+                        content=None,
+                        location=pdf_path,
+                        rationale="No extractable images were found in the PDF for vision analysis.",
+                        confidence=0.95,
+                    )
+                ]
+            return [classify_diagram_flow(image_path, runtime_config) for image_path in extracted]
+    except Exception as exc:
+        return [
+            Evidence(
+                goal="Swarm Visual Flow Analysis",
+                found=False,
+                content=str(exc),
+                location=pdf_path,
+                rationale="Vision analysis failed while parsing or extracting PDF images.",
+                confidence=1.0,
+            )
+        ]
 
 
 def _load_vision_model(runtime_config: RuntimeLLMConfig | None = None) -> Any | None:

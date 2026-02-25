@@ -9,7 +9,7 @@ def test_security_override_caps_score() -> None:
             judge="Prosecutor",
             criterion_id="sandbox_safety",
             score=5,
-            argument="Security issue: os.system used",
+            argument="Security issue: unsafe shell execution path used",
             cited_evidence=["repo:Safe Tool Engineering"],
         ),
         JudicialOpinion(
@@ -31,7 +31,7 @@ def test_security_override_caps_score() -> None:
         "repo:Safe Tool Engineering": Evidence(
             goal="Safe Tool Engineering",
             found=False,
-            content="os.system",
+            content="unsafe shell execution",
             location="src/tools/repo_tools.py",
             rationale="unsafe",
             confidence=1.0,

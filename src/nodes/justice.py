@@ -22,7 +22,10 @@ def resolve_criterion(
     final_score = round(mean(scores))
 
     security_vulnerability = any(
-        "security" in op.argument.lower() or "os.system" in op.argument.lower() for op in opinions
+        "security" in op.argument.lower()
+        or "unsafe shell" in op.argument.lower()
+        or "command injection" in op.argument.lower()
+        for op in opinions
     )
     if security_vulnerability:
         final_score = min(final_score, 3)
