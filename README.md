@@ -55,6 +55,16 @@ uv lock
 uv run python src/cli.py --repo-url <repo_url> --pdf-path reports/interim_report.pdf
 ```
 
+End-to-end example:
+
+```bash
+uv run python src/cli.py \
+  --repo-url https://github.com/langchain-ai/langgraph.git \
+  --pdf-path reports/final_report.pdf \
+  --rubric-preset industry_iso_soc2 \
+  --output audit/report_onself_generated/sample_audit.md
+```
+
 ## Run API
 
 ```bash
@@ -134,3 +144,12 @@ GitHub Actions workflow runs backend compile/tests and frontend production build
 ```bash
 uv run pytest
 ```
+
+## Troubleshooting
+
+- `uv sync` fails with network/DNS errors:
+  - Re-run with network access enabled; lockfile resolution and install require PyPI reachability.
+- API returns `401` or `503`:
+  - Set `API_AUTH_KEY` in `.env` and send matching `x-api-key` header.
+- Ollama model calls fail:
+  - Ensure local Ollama is running and `OLLAMA_BASE_URL` is correct (default `http://localhost:11434`).
