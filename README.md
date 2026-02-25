@@ -27,6 +27,7 @@ uv run uvicorn src.server:app --host 0.0.0.0 --port 8000 --reload
 
 API endpoints:
 - `POST /api/audits/run`
+- `POST /api/audits/run-async`
 - `GET /api/audits`
 - `GET /api/audits/{run_id}`
 - `GET /api/audits/{run_id}/result`
@@ -44,6 +45,7 @@ The UI now supports:
 - Launching an audit run
 - Viewing persisted run history
 - Loading prior run results
+- Async run submission with status polling
 
 ## Test
 
