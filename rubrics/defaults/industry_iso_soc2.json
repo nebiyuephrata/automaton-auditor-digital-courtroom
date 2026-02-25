@@ -1,0 +1,54 @@
+{
+  "rubric_metadata": {
+    "name": "Industry Baseline (ISO 27001 + SOC 2)",
+    "version": "1.0",
+    "framework": "general",
+    "standard": "iso27001_soc2",
+    "description": "Security, governance, auditability, and operational control baseline aligned to ISO 27001 and SOC 2 principles."
+  },
+  "dimensions": [
+    {
+      "id": "langgraph_architecture",
+      "name": "Parallel Governance Architecture",
+      "target_artifact": "repo",
+      "forensic_instruction": "Validate START->Detectives parallel fan-out, fan-in synchronization, Judges parallel fan-out, deterministic ChiefJustice.",
+      "judicial_logic": "Score 1 when linearized; score high only with explicit fan-out and fan-in wiring."
+    },
+    {
+      "id": "state_management",
+      "name": "Typed State and Reducer Safety",
+      "target_artifact": "repo",
+      "forensic_instruction": "Verify BaseModel schemas, TypedDict AgentState, Annotated reducers operator.add/operator.ior.",
+      "judicial_logic": "Cap at 2 if dict soup or overwrite risk is present."
+    },
+    {
+      "id": "security_controls",
+      "name": "Security and Sandbox Controls",
+      "target_artifact": "repo",
+      "forensic_instruction": "Require tempfile, subprocess.run, return code validation, and explicit failure handling.",
+      "judicial_logic": "Security defects cap score to 3 regardless of other strengths."
+    },
+    {
+      "id": "auditability",
+      "name": "Traceability and Evidence Integrity",
+      "target_artifact": "all",
+      "forensic_instruction": "Cross-reference claims against repository paths and collected evidence channels.",
+      "judicial_logic": "Defense claims without cited evidence must be downgraded."
+    },
+    {
+      "id": "deterministic_arbitration",
+      "name": "Deterministic Arbitration",
+      "target_artifact": "repo",
+      "forensic_instruction": "Confirm ChiefJustice is pure Python and enforces override/variance/dissent rules.",
+      "judicial_logic": "Any LLM-based final synthesis is non-compliant."
+    }
+  ],
+  "synthesis_rules": {
+    "security_override_cap": 3,
+    "fact_supremacy": true,
+    "functionality_weight": "techlead",
+    "variance_threshold": 2,
+    "dissent_required_on_variance": true,
+    "structural_fraud_architecture_score": 1
+  }
+}

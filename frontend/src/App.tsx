@@ -1,5 +1,15 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
+type RuntimeConfig = {
+  judge_provider: string;
+  judge_model: string;
+  vision_provider: string;
+  vision_model: string;
+  openai_api_key?: string;
+  anthropic_api_key?: string;
+  ollama_base_url?: string;
+};
+
 type AuditResponse = {
   run_id: string;
   rendered_markdown: string;
@@ -19,6 +29,22 @@ type AuditRecord = {
   errors: string[];
 };
 
+type RubricPreset = {
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+  framework: string;
+  standard: string;
+};
+
+type RuntimeOptions = {
+  judge_providers: string[];
+  vision_providers: string[];
+  default_models: Record<string, string>;
+  rubric_presets: RubricPreset[];
+};
+
 const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const apiKey = import.meta.env.VITE_API_KEY ?? "change-me";
 
@@ -35,8 +61,19 @@ export function App() {
   const [repoUrl, setRepoUrl] = useState("");
   const [pdfPath, setPdfPath] = useState("reports/final_report.pdf");
   const [rubricPath, setRubricPath] = useState("rubric.json");
+  const [rubricPreset, setRubricPreset] = useState("industry_iso_soc2");
+  const [useRubricPreset, setUseRubricPreset] = useState(true);
   const [outputPath, setOutputPath] = useState("audit/report_onself_generated/final_audit_report.md");
 
+  const [judgeProvider, setJudgeProvider] = useState("openai");
+  const [judgeModel, setJudgeModel] = useState("gpt-4o-mini");
+  const [visionProvider, setVisionProvider] = useState("openai");
+  const [visionModel, setVisionModel] = useState("gpt-4o-mini");
+  const [openAiApiKey, setOpenAiApiKey] = useState("");
+  const [anthropicApiKey, setAnthropicApiKey] = useState("");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
+
+  const [runtimeOptions, setRuntimeOptions] = useState<RuntimeOptions | null>(null);
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +89,26 @@ export function App() {
     }
     return JSON.stringify(result.final_report, null, 2);
   }, [result]);
+
+  async function loadRuntimeOptions() {
+    try {
+      const response = await apiFetch("/api/runtime/options");
+      if (!response.ok) {
+        throw new Error(`Failed to load runtime options (${response.status})`);
+      }
+      const payload = (await response.json()) as RuntimeOptions;
+      setRuntimeOptions(payload);
+
+      const openAiDefault = payload.default_models.openai ?? "gpt-4o-mini";
+      setJudgeModel((current) => (current ? current : openAiDefault));
+      setVisionModel((current) => (current ? current : openAiDefault));
+      if (payload.rubric_presets.length > 0) {
+        setRubricPreset(payload.rubric_presets[0].id);
+      }
+    } catch (runtimeError) {
+      setError(runtimeError instanceof Error ? runtimeError.message : "Failed to load runtime options");
+    }
+  }
 
   async function loadHistory() {
     setHistoryLoading(true);
@@ -70,6 +127,7 @@ export function App() {
   }
 
   useEffect(() => {
+    void loadRuntimeOptions();
     void loadHistory();
     return () => {
       if (pollTimerRef.current !== null) {
@@ -77,6 +135,22 @@ export function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!runtimeOptions) {
+      return;
+    }
+    const defaultModel = runtimeOptions.default_models[judgeProvider] ?? "gpt-4o-mini";
+    setJudgeModel(defaultModel);
+  }, [judgeProvider, runtimeOptions]);
+
+  useEffect(() => {
+    if (!runtimeOptions) {
+      return;
+    }
+    const defaultModel = runtimeOptions.default_models[visionProvider] ?? "gpt-4o-mini";
+    setVisionModel(defaultModel);
+  }, [visionProvider, runtimeOptions]);
 
   async function loadRunResult(runId: string) {
     setLoading(true);
@@ -156,13 +230,25 @@ export function App() {
     setError(null);
     setResult(null);
 
+    const runtimeConfig: RuntimeConfig = {
+      judge_provider: judgeProvider,
+      judge_model: judgeModel,
+      vision_provider: visionProvider,
+      vision_model: visionModel,
+      openai_api_key: openAiApiKey || undefined,
+      anthropic_api_key: anthropicApiKey || undefined,
+      ollama_base_url: ollamaBaseUrl || undefined
+    };
+
     try {
       const response = await apiFetch(`/api/audits/run-async`, {
         method: "POST",
         body: JSON.stringify({
           repo_url: repoUrl,
           pdf_path: pdfPath,
-          rubric_path: rubricPath,
+          rubric_path: useRubricPreset ? "" : rubricPath,
+          rubric_preset: useRubricPreset ? rubricPreset : undefined,
+          runtime_config: runtimeConfig,
           output_path: outputPath
         })
       });
@@ -211,15 +297,38 @@ export function App() {
               placeholder="reports/final_report.pdf"
             />
           </label>
-          <label>
-            Rubric Path
-            <input
-              required
-              value={rubricPath}
-              onChange={(event) => setRubricPath(event.target.value)}
-              placeholder="rubric.json"
-            />
-          </label>
+          <div className="inlineToggle">
+            <label>
+              <input
+                type="checkbox"
+                checked={useRubricPreset}
+                onChange={(event) => setUseRubricPreset(event.target.checked)}
+              />
+              Use default rubric preset
+            </label>
+          </div>
+          {useRubricPreset ? (
+            <label>
+              Rubric Preset
+              <select value={rubricPreset} onChange={(event) => setRubricPreset(event.target.value)}>
+                {(runtimeOptions?.rubric_presets ?? []).map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name} ({preset.framework})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label>
+              Rubric Path
+              <input
+                required
+                value={rubricPath}
+                onChange={(event) => setRubricPath(event.target.value)}
+                placeholder="rubric.json"
+              />
+            </label>
+          )}
           <label>
             Output Path
             <input
@@ -229,6 +338,63 @@ export function App() {
               placeholder="audit/report_onself_generated/final_audit_report.md"
             />
           </label>
+
+          <h3>Runtime LLM Settings</h3>
+          <label>
+            Judge Provider
+            <select value={judgeProvider} onChange={(event) => setJudgeProvider(event.target.value)}>
+              {(runtimeOptions?.judge_providers ?? ["openai", "anthropic", "ollama"]).map((provider) => (
+                <option key={provider} value={provider}>
+                  {provider}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Judge Model
+            <input value={judgeModel} onChange={(event) => setJudgeModel(event.target.value)} placeholder="gpt-4o-mini" />
+          </label>
+          <label>
+            Vision Provider
+            <select value={visionProvider} onChange={(event) => setVisionProvider(event.target.value)}>
+              {(runtimeOptions?.vision_providers ?? ["openai", "anthropic", "ollama"]).map((provider) => (
+                <option key={provider} value={provider}>
+                  {provider}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Vision Model
+            <input value={visionModel} onChange={(event) => setVisionModel(event.target.value)} placeholder="gpt-4o-mini" />
+          </label>
+          <label>
+            OpenAI API Key (optional)
+            <input
+              type="password"
+              value={openAiApiKey}
+              onChange={(event) => setOpenAiApiKey(event.target.value)}
+              placeholder="sk-..."
+            />
+          </label>
+          <label>
+            Anthropic API Key (optional)
+            <input
+              type="password"
+              value={anthropicApiKey}
+              onChange={(event) => setAnthropicApiKey(event.target.value)}
+              placeholder="sk-ant-..."
+            />
+          </label>
+          <label>
+            Ollama Base URL (optional)
+            <input
+              value={ollamaBaseUrl}
+              onChange={(event) => setOllamaBaseUrl(event.target.value)}
+              placeholder="http://localhost:11434"
+            />
+          </label>
+
           <div className="actions">
             <button type="submit" disabled={loading || activeRunId !== null}>
               {activeRunId ? "Audit Running..." : loading ? "Submitting..." : "Run Audit"}

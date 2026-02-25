@@ -6,6 +6,7 @@ from typing import Dict
 
 from src.service.audit_runner import run_audit
 from src.service.audit_store import AuditStore
+from src.state import RuntimeLLMConfig
 
 
 class AuditJobManager:
@@ -16,7 +17,16 @@ class AuditJobManager:
         self._cancel_events: Dict[str, threading.Event] = {}
         self._lock = threading.Lock()
 
-    def submit(self, run_id: str, repo_url: str, pdf_path: str, rubric_path: str, output_path: str | None) -> None:
+    def submit(
+        self,
+        run_id: str,
+        repo_url: str,
+        pdf_path: str,
+        rubric_path: str,
+        output_path: str | None,
+        rubric_preset: str | None = None,
+        runtime_config: RuntimeLLMConfig | None = None,
+    ) -> None:
         self.store.update_status(run_id, "queued")
         cancel_event = threading.Event()
 
@@ -37,6 +47,8 @@ class AuditJobManager:
                     repo_url=repo_url,
                     pdf_path=pdf_path,
                     rubric_path=rubric_path,
+                    rubric_preset=rubric_preset,
+                    runtime_config=runtime_config,
                     output_path=output_path,
                 )
                 self.store.complete_run(

@@ -7,12 +7,20 @@ from src.service.async_jobs import AuditJobManager
 from src.service.audit_runner import run_audit
 from src.service.audit_store import AuditStore
 from src.service.security import SecurityConfig, SlidingWindowRateLimiter, is_api_key_valid
+from src.state import RuntimeLLMConfig
+from src.utils.rubric_loader import (
+    DEFAULT_RUBRIC_PRESET,
+    list_rubric_presets,
+    resolve_rubric_path,
+)
 
 
 class AuditRunRequest(BaseModel):
     repo_url: str = Field(min_length=1)
     pdf_path: str = Field(min_length=1)
     rubric_path: str = Field(default="rubric.json", min_length=1)
+    rubric_preset: str | None = Field(default=DEFAULT_RUBRIC_PRESET)
+    runtime_config: RuntimeLLMConfig = Field(default_factory=RuntimeLLMConfig)
     output_path: str | None = Field(default=None)
 
 
@@ -33,6 +41,13 @@ class AuditRunRecordResponse(BaseModel):
     status: str
     overall_score: float | None = None
     errors: list[str] = Field(default_factory=list)
+
+
+class RuntimeOptionsResponse(BaseModel):
+    judge_providers: list[str]
+    vision_providers: list[str]
+    default_models: dict[str, str]
+    rubric_presets: list[dict]
 
 
 app = FastAPI(title="Automaton Auditor API", version="0.1.0")
@@ -57,6 +72,20 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/runtime/options", response_model=RuntimeOptionsResponse)
+def runtime_options_endpoint() -> RuntimeOptionsResponse:
+    return RuntimeOptionsResponse(
+        judge_providers=["openai", "anthropic", "ollama"],
+        vision_providers=["openai", "anthropic", "ollama"],
+        default_models={
+            "openai": "gpt-4o-mini",
+            "anthropic": "claude-3-5-sonnet-latest",
+            "ollama": "llama3.1",
+        },
+        rubric_presets=list_rubric_presets(),
+    )
 
 
 def enforce_api_auth(x_api_key: str | None = Header(default=None)) -> None:
@@ -84,17 +113,23 @@ def run_audit_endpoint(
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
 ) -> AuditRunResponse:
+    resolved_rubric = resolve_rubric_path(
+        rubric_path=request.rubric_path,
+        rubric_preset=request.rubric_preset,
+    )
     run_id = store.create_run(
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
-        rubric_path=request.rubric_path,
+        rubric_path=resolved_rubric,
         output_path=request.output_path,
     )
     try:
         result = run_audit(
             repo_url=request.repo_url,
             pdf_path=request.pdf_path,
-            rubric_path=request.rubric_path,
+            rubric_path=resolved_rubric,
+            rubric_preset=request.rubric_preset,
+            runtime_config=request.runtime_config,
             output_path=request.output_path,
         )
     except Exception as exc:
@@ -122,10 +157,14 @@ def run_audit_async_endpoint(
     _auth: None = Depends(enforce_api_auth),
     _rate: None = Depends(enforce_rate_limit),
 ) -> AuditRunRecordResponse:
+    resolved_rubric = resolve_rubric_path(
+        rubric_path=request.rubric_path,
+        rubric_preset=request.rubric_preset,
+    )
     run_id = store.create_run(
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
-        rubric_path=request.rubric_path,
+        rubric_path=resolved_rubric,
         output_path=request.output_path,
         status="queued",
     )
@@ -133,8 +172,10 @@ def run_audit_async_endpoint(
         run_id=run_id,
         repo_url=request.repo_url,
         pdf_path=request.pdf_path,
-        rubric_path=request.rubric_path,
+        rubric_path=resolved_rubric,
         output_path=request.output_path,
+        rubric_preset=request.rubric_preset,
+        runtime_config=request.runtime_config,
     )
     return AuditRunRecordResponse(**store.get_run(run_id))
 

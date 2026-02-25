@@ -1,0 +1,40 @@
+{
+  "rubric_metadata": {
+    "name": "TypeScript/React Governance Best Practices",
+    "version": "1.0",
+    "framework": "typescript_react",
+    "standard": "best_practices",
+    "description": "Framework-focused rubric for TypeScript/React systems including API integration governance."
+  },
+  "dimensions": [
+    {
+      "id": "typed_ui_state",
+      "name": "Typed UI State Integrity",
+      "target_artifact": "repo",
+      "forensic_instruction": "Validate strict typing for run state, responses, and runtime configuration fields.",
+      "judicial_logic": "Untyped dynamic payload paths should be scored low."
+    },
+    {
+      "id": "api_integration_reliability",
+      "name": "API Integration Reliability",
+      "target_artifact": "repo",
+      "forensic_instruction": "Check authenticated calls, polling behavior, and terminal status handling.",
+      "judicial_logic": "Missing error-state handling caps score at 2."
+    },
+    {
+      "id": "governance_operability",
+      "name": "Governance Operability",
+      "target_artifact": "all",
+      "forensic_instruction": "Verify operator controls for model/provider/rubric configuration.",
+      "judicial_logic": "If runtime governance controls are absent, score cannot exceed 3."
+    }
+  ],
+  "synthesis_rules": {
+    "security_override_cap": 3,
+    "fact_supremacy": true,
+    "functionality_weight": "techlead",
+    "variance_threshold": 2,
+    "dissent_required_on_variance": true,
+    "structural_fraud_architecture_score": 1
+  }
+}

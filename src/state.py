@@ -46,11 +46,22 @@ class AuditReport(BaseModel):
     remediation_plan: str
 
 
+class RuntimeLLMConfig(BaseModel):
+    judge_provider: str = "openai"
+    judge_model: str = "gpt-4o-mini"
+    vision_provider: str = "openai"
+    vision_model: str = "gpt-4o-mini"
+    openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    ollama_base_url: Optional[str] = None
+
+
 class AgentState(TypedDict, total=False):
     repo_url: str
     pdf_path: str
     rubric_dimensions: List[Dict]
     evidences: Annotated[Dict[str, List[Evidence]], operator.ior]
     opinions: Annotated[List[JudicialOpinion], operator.add]
+    runtime_config: RuntimeLLMConfig
     final_report: AuditReport
     errors: Annotated[List[str], operator.add]

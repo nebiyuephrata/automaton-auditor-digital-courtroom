@@ -1,0 +1,47 @@
+{
+  "rubric_metadata": {
+    "name": "Python/FastAPI Governance Best Practices",
+    "version": "1.0",
+    "framework": "python_fastapi",
+    "standard": "best_practices",
+    "description": "Framework-focused rubric for Python/FastAPI systems with governance and safety controls."
+  },
+  "dimensions": [
+    {
+      "id": "api_contracts",
+      "name": "API Contract Enforcement",
+      "target_artifact": "repo",
+      "forensic_instruction": "Validate typed request/response contracts and strict status handling.",
+      "judicial_logic": "Downgrade when API payloads are untyped or error handling is implicit."
+    },
+    {
+      "id": "concurrency_safety",
+      "name": "Concurrency and State Isolation",
+      "target_artifact": "repo",
+      "forensic_instruction": "Inspect async job handling, cancellation behavior, and run state isolation.",
+      "judicial_logic": "Critical shared mutable state risks reduce score to 2 or below."
+    },
+    {
+      "id": "forensic_accuracy",
+      "name": "AST and Structural Verification",
+      "target_artifact": "repo",
+      "forensic_instruction": "Require AST parsing for structural checks and explicit fan-out/fan-in detection.",
+      "judicial_logic": "Regex-only structural validation is non-compliant."
+    },
+    {
+      "id": "deterministic_arbitration",
+      "name": "Deterministic Arbitration",
+      "target_artifact": "repo",
+      "forensic_instruction": "Confirm ChiefJustice uses deterministic pure Python rules.",
+      "judicial_logic": "LLM synthesis in arbitration path is forbidden."
+    }
+  ],
+  "synthesis_rules": {
+    "security_override_cap": 3,
+    "fact_supremacy": true,
+    "functionality_weight": "techlead",
+    "variance_threshold": 2,
+    "dissent_required_on_variance": true,
+    "structural_fraud_architecture_score": 1
+  }
+}
