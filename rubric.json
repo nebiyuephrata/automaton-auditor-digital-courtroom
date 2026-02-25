@@ -1,0 +1,87 @@
+{
+  "rubric_metadata": {
+    "name": "Automaton Auditor Input Rubric",
+    "version": "1.0",
+    "description": "Binding law for detective, judge, and chief justice nodes"
+  },
+  "dimensions": [
+    {
+      "id": "langgraph_architecture",
+      "name": "LangGraph Architecture",
+      "target_artifact": "repo",
+      "forensic_instruction": "Validate START->Detectives fan-out, fan-in sync node, Judges fan-out, ChiefJustice synthesis.",
+      "judicial_logic": "Score 1 if linear graph; score high only with explicit fan-out and fan-in wiring."
+    },
+    {
+      "id": "state_management",
+      "name": "State Management Rigor",
+      "target_artifact": "repo",
+      "forensic_instruction": "Detect BaseModel classes, TypedDict AgentState, and reducers operator.add/operator.ior.",
+      "judicial_logic": "Downgrade when dict soup or overwrite risk appears."
+    },
+    {
+      "id": "forensic_accuracy",
+      "name": "Forensic Accuracy",
+      "target_artifact": "repo",
+      "forensic_instruction": "Use AST parsing and safe subprocess tooling in temp directories.",
+      "judicial_logic": "Penalize regex-only structural validation and unsafe os.system patterns."
+    },
+    {
+      "id": "documentation_depth",
+      "name": "Documentation Depth",
+      "target_artifact": "docs",
+      "forensic_instruction": "Find dialectical synthesis, fan-in/fan-out, metacognition explanations with context.",
+      "judicial_logic": "Penalize buzzword stuffing without concrete architecture explanation."
+    },
+    {
+      "id": "citation_integrity",
+      "name": "Citation Integrity",
+      "target_artifact": "docs",
+      "forensic_instruction": "Cross-check report-mentioned file paths against repository inventory.",
+      "judicial_logic": "Defense claims without evidence should be overruled."
+    },
+    {
+      "id": "visual_architecture",
+      "name": "Visual Architecture",
+      "target_artifact": "vision",
+      "forensic_instruction": "Classify whether diagrams depict true parallel courtroom flow.",
+      "judicial_logic": "Penalize generic flowcharts that omit fan-out/fan-in details."
+    },
+    {
+      "id": "judicial_nuance",
+      "name": "Judicial Nuance",
+      "target_artifact": "repo",
+      "forensic_instruction": "Confirm judge personas are separate nodes with structured output enforcement.",
+      "judicial_logic": "Cap at 2 for free-text judge outputs."
+    },
+    {
+      "id": "synthesis_engine",
+      "name": "Synthesis Engine",
+      "target_artifact": "repo",
+      "forensic_instruction": "Verify deterministic, rule-based ChiefJustice with variance and dissent handling.",
+      "judicial_logic": "Penalize any LLM-driven final synthesis."
+    },
+    {
+      "id": "sandbox_safety",
+      "name": "Sandbox Safety",
+      "target_artifact": "repo",
+      "forensic_instruction": "Require tempfile + subprocess.run + return code checks in clone and git tools.",
+      "judicial_logic": "Security negligence overrides effort arguments."
+    },
+    {
+      "id": "remediation_quality",
+      "name": "Remediation Quality",
+      "target_artifact": "all",
+      "forensic_instruction": "Check if remediations are file-level, specific, and actionable.",
+      "judicial_logic": "Penalize generic remediation text lacking exact file instructions."
+    }
+  ],
+  "synthesis_rules": {
+    "security_override_cap": 3,
+    "fact_supremacy": true,
+    "functionality_weight": "techlead",
+    "variance_threshold": 2,
+    "dissent_required_on_variance": true,
+    "structural_fraud_architecture_score": 1
+  }
+}
