@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from src.config.logging_config import configure_logging
+from src.config.settings import apply_runtime_settings, load_settings
 from src.graph import create_graph
 from src.utils.rubric_loader import rubric_dimensions
 
@@ -19,6 +20,7 @@ def main() -> None:
     args = parser.parse_args()
 
     configure_logging()
+    apply_runtime_settings(load_settings())
 
     app = create_graph()
     state = {
