@@ -67,6 +67,26 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #a61b1b;
+  font-weight: 700;
+}
+
+.output {
+  background: #0f172a;
+  color: #dbeafe;
+  padding: 0.9rem;
+  border-radius: 8px;
+  overflow: auto;
+  max-height: 360px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 640px) {
   .shell {
     padding: 1.25rem 0.8rem 2rem;
