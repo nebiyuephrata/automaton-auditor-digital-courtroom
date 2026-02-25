@@ -35,6 +35,7 @@ API endpoints:
 - `GET /api/audits`
 - `GET /api/audits/{run_id}`
 - `GET /api/audits/{run_id}/result`
+- `GET /api/runtime/options`
 
 Security:
 - All `/api/audits/*` endpoints require `x-api-key` header matching `API_AUTH_KEY`.
@@ -51,6 +52,22 @@ Vision analysis:
 - VisionInspector extracts images directly from the submitted PDF.
 - It attempts multimodal structured classification of required courtroom flow.
 - If no multimodal model is configured, it records heuristic analysis with explicit confidence.
+
+Runtime model switching:
+- Request-level runtime config supports `openai`, `anthropic`, and `ollama`.
+- Local model example: set provider to `ollama` and model to `llama3.1`.
+- Optional per-run keys/URL are supported via `runtime_config`:
+  - `openai_api_key`
+  - `anthropic_api_key`
+  - `ollama_base_url`
+
+Default and optional rubrics:
+- Use default preset rubric (`industry_iso_soc2`) when no local rubric path exists.
+- Included preset library under `rubrics/defaults/`:
+  - `industry_iso_soc2.json`
+  - `python_fastapi_best_practices.json`
+  - `typescript_react_best_practices.json`
+- Frontend supports either preset selection or custom rubric path.
 
 ## Run Frontend
 
