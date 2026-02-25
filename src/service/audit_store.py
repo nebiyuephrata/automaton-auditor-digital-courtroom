@@ -45,6 +45,7 @@ class AuditStore:
         pdf_path: str,
         rubric_path: str,
         output_path: str | None,
+        status: str = "running",
     ) -> str:
         run_id = uuid4().hex
         record = AuditRunRecord(
@@ -54,12 +55,17 @@ class AuditStore:
             pdf_path=pdf_path,
             rubric_path=rubric_path,
             output_path=output_path,
-            status="running",
+            status=status,
             overall_score=None,
             errors=[],
         )
         self._write_json(self._record_path(run_id), record.to_dict())
         return run_id
+
+    def update_status(self, run_id: str, status: str) -> None:
+        record = self.get_run(run_id)
+        updated = {**record, "status": status}
+        self._write_json(self._record_path(run_id), updated)
 
     def complete_run(
         self,

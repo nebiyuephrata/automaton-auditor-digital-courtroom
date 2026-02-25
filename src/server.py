@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from src.service.async_jobs import AuditJobManager
 from src.service.audit_runner import run_audit
 from src.service.audit_store import AuditStore
 
@@ -34,6 +35,7 @@ class AuditRunRecordResponse(BaseModel):
 
 app = FastAPI(title="Automaton Auditor API", version="0.1.0")
 store = AuditStore()
+job_manager = AuditJobManager(store)
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,6 +83,25 @@ def run_audit_endpoint(request: AuditRunRequest) -> AuditRunResponse:
         final_report=result.get("final_report"),
         errors=result.get("errors", []),
     )
+
+
+@app.post("/api/audits/run-async", response_model=AuditRunRecordResponse)
+def run_audit_async_endpoint(request: AuditRunRequest) -> AuditRunRecordResponse:
+    run_id = store.create_run(
+        repo_url=request.repo_url,
+        pdf_path=request.pdf_path,
+        rubric_path=request.rubric_path,
+        output_path=request.output_path,
+        status="queued",
+    )
+    job_manager.submit(
+        run_id=run_id,
+        repo_url=request.repo_url,
+        pdf_path=request.pdf_path,
+        rubric_path=request.rubric_path,
+        output_path=request.output_path,
+    )
+    return AuditRunRecordResponse(**store.get_run(run_id))
 
 
 @app.get("/api/audits", response_model=list[AuditRunRecordResponse])
