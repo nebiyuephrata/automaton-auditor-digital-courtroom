@@ -60,6 +60,8 @@ def health() -> dict:
 
 
 def enforce_api_auth(x_api_key: str | None = Header(default=None)) -> None:
+    if not security_config.api_auth_key:
+        raise HTTPException(status_code=503, detail="API auth key is not configured")
     if not is_api_key_valid(x_api_key, security_config.api_auth_key):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -166,6 +168,13 @@ def get_audit_result_endpoint(
     _rate: None = Depends(enforce_rate_limit),
 ) -> dict:
     try:
+        record = store.get_run(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found") from exc
+    if record.get("status") in {"queued", "running", "cancel_requested"}:
+        raise HTTPException(status_code=409, detail=f"Run {run_id} is not complete yet")
+
+    try:
         return store.get_result(run_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Result for run {run_id} not found") from exc
@@ -185,3 +194,8 @@ def cancel_audit_endpoint(
     if not job_manager.cancel(run_id):
         raise HTTPException(status_code=409, detail="Run is not cancelable")
     return AuditRunRecordResponse(**store.get_run(run_id))
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    job_manager.shutdown(wait=False)

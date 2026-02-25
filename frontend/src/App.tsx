@@ -83,6 +83,10 @@ export function App() {
     setError(null);
     try {
       const response = await apiFetch(`/api/audits/${runId}/result`);
+      if (response.status === 409) {
+        setError(`Run ${runId} is not complete yet.`);
+        return;
+      }
       if (!response.ok) {
         throw new Error(`Failed to load run result (${response.status})`);
       }
