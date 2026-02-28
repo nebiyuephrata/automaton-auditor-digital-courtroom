@@ -7,6 +7,9 @@ async def test_runtime_options_exposes_providers_and_presets() -> None:
 
     payload = (await runtime_options_endpoint()).model_dump()
     assert "ollama" in payload["judge_providers"]
+    assert "openrouter" in payload["judge_providers"]
     assert "ollama" in payload["vision_providers"]
+    assert "openrouter" in payload["vision_providers"]
     assert payload["default_models"]["ollama"] == "llama3.1"
+    assert payload["default_models"]["openrouter"] == "openai/gpt-4o-mini"
     assert len(payload["rubric_presets"]) > 0

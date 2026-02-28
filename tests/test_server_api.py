@@ -1,4 +1,5 @@
 import tempfile
+import os
 
 import httpx
 import pytest
@@ -204,6 +205,44 @@ async def test_cancel_endpoint_can_cancel_queued_run(monkeypatch) -> None:
 
 
 @pytest.mark.anyio
+async def test_clear_audits_endpoint_removes_terminal_runs_only(monkeypatch) -> None:
+    store, temp_dir = _configure_test_runtime(monkeypatch)
+    try:
+        completed_id = store.create_run(
+            repo_url="https://example.com/completed.git",
+            pdf_path="reports/final_report.pdf",
+            rubric_path="rubric.json",
+            output_path=None,
+            status="running",
+        )
+        store.complete_run(
+            run_id=completed_id,
+            final_report={"overall_score": 4.2},
+            rendered_markdown="# done",
+            errors=[],
+        )
+        queued_id = store.create_run(
+            repo_url="https://example.com/queued.git",
+            pdf_path="reports/final_report.pdf",
+            rubric_path="rubric.json",
+            output_path=None,
+            status="queued",
+        )
+
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.delete("/api/audits", headers={"x-api-key": "test-key"})
+            assert response.status_code == 200
+            assert response.json()["deleted_count"] == 1
+
+        with pytest.raises(FileNotFoundError):
+            store.get_run(completed_id)
+        assert store.get_run(queued_id)["status"] == "queued"
+    finally:
+        temp_dir.cleanup()
+
+
+@pytest.mark.anyio
 async def test_run_async_rejects_invalid_repo_url(monkeypatch) -> None:
     _store, temp_dir = _configure_test_runtime(monkeypatch)
     try:
@@ -273,6 +312,34 @@ async def test_run_async_rejects_unknown_rubric_preset(monkeypatch) -> None:
 
 
 @pytest.mark.anyio
+async def test_run_async_accepts_openrouter_provider(monkeypatch) -> None:
+    _store, temp_dir = _configure_test_runtime(monkeypatch)
+    try:
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/audits/run-async",
+                headers={"x-api-key": "test-key"},
+                json={
+                    "repo_url": "https://example.com/repo.git",
+                    "pdf_path": "reports/final_report.pdf",
+                    "rubric_path": "rubric.json",
+                    "runtime_config": {
+                        "judge_provider": "openrouter",
+                        "judge_model": "openai/gpt-4o-mini",
+                        "vision_provider": "openrouter",
+                        "vision_model": "openai/gpt-4o-mini",
+                        "openrouter_api_key": "or-key",
+                    },
+                },
+            )
+            assert response.status_code == 200
+            assert response.json()["status"] == "completed"
+    finally:
+        temp_dir.cleanup()
+
+
+@pytest.mark.anyio
 async def test_response_includes_request_id_header(monkeypatch) -> None:
     _store, temp_dir = _configure_test_runtime(monkeypatch)
     try:
@@ -285,4 +352,41 @@ async def test_response_includes_request_id_header(monkeypatch) -> None:
             assert response.status_code == 200
             assert response.headers.get("x-request-id") == "req-123"
     finally:
+        temp_dir.cleanup()
+
+
+@pytest.mark.anyio
+async def test_download_report_pdf_endpoint(monkeypatch) -> None:
+    store, temp_dir = _configure_test_runtime(monkeypatch)
+    pdf_name = ""
+    try:
+        pdf_file = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        pdf_file.write(b"%PDF-1.4\n%fake\n")
+        pdf_file.flush()
+        pdf_file.close()
+        pdf_name = pdf_file.name
+
+        run_id = store.create_run(
+            repo_url="https://example.com/repo.git",
+            pdf_path=pdf_name,
+            rubric_path="rubric.json",
+            output_path=None,
+            status="completed",
+        )
+
+        transport = httpx.ASGITransport(app=server.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(
+                f"/api/audits/{run_id}/report-pdf",
+                headers={"x-api-key": "test-key"},
+            )
+            assert response.status_code == 200
+            assert response.headers.get("content-type") == "application/pdf"
+            assert response.content.startswith(b"%PDF-1.4")
+    finally:
+        if pdf_name:
+            try:
+                os.unlink(pdf_name)
+            except OSError:
+                pass
         temp_dir.cleanup()
