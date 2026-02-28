@@ -193,6 +193,65 @@ button:disabled {
   color: var(--text);
 }
 
+.criterionCard {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 0.8rem;
+  margin-bottom: 0.7rem;
+}
+
+.runLoader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  margin-bottom: 0.8rem;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2);
+  border-top-color: var(--btn);
+  animation: spin 0.9s linear infinite;
+  flex: 0 0 auto;
+}
+
+.progressMeta {
+  width: 100%;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.progressBar {
+  height: 8px;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--btn);
+  transition: width 0.35s ease;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 640px) {
   .shell {
     padding: 1.25rem 0.8rem 2rem;
