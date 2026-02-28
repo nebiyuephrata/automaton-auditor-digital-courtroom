@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import os
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -13,12 +14,15 @@ class Settings:
     vision_model: str
     openai_api_key: str
     anthropic_api_key: str
+    openrouter_api_key: str
+    openrouter_base_url: str
     ollama_base_url: str
     api_auth_key: str
     api_rate_limit_per_minute: int
 
 
 def load_settings() -> Settings:
+    _load_dotenv()
     tracing_flag = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
     return Settings(
         langchain_tracing_v2=tracing_flag,
@@ -30,6 +34,8 @@ def load_settings() -> Settings:
         vision_model=os.getenv("VISION_MODEL", "gpt-4o-mini"),
         openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+        openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+        openrouter_base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
         ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         api_auth_key=os.getenv("API_AUTH_KEY", ""),
         api_rate_limit_per_minute=_int_env("API_RATE_LIMIT_PER_MINUTE", 60, min_value=1),
@@ -53,6 +59,10 @@ def apply_runtime_settings(settings: Settings) -> None:
         os.environ["OPENAI_API_KEY"] = settings.openai_api_key
     if settings.anthropic_api_key:
         os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+    if settings.openrouter_api_key:
+        os.environ["OPENROUTER_API_KEY"] = settings.openrouter_api_key
+    if settings.openrouter_base_url:
+        os.environ["OPENROUTER_BASE_URL"] = settings.openrouter_base_url
 
 
 def _int_env(name: str, default: int, min_value: int = 1) -> int:
@@ -64,3 +74,21 @@ def _int_env(name: str, default: int, min_value: int = 1) -> int:
     except ValueError:
         return default
     return max(min_value, parsed)
+
+
+def _load_dotenv() -> None:
+    dotenv_path = Path(".env")
+    if not dotenv_path.exists():
+        return
+
+    for raw_line in dotenv_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        os.environ.setdefault(key, value)

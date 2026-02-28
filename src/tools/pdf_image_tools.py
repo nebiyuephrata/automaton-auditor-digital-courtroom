@@ -159,6 +159,20 @@ def _load_vision_model(runtime_config: RuntimeLLMConfig | None = None) -> Any | 
             base_url=runtime_config.ollama_base_url or "http://localhost:11434",
         )
 
+    if provider == "openrouter":
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            return None
+        if not runtime_config.openrouter_api_key:
+            return None
+        return ChatOpenAI(
+            model=model_name,
+            temperature=0,
+            api_key=runtime_config.openrouter_api_key,
+            base_url=runtime_config.openrouter_base_url or "https://openrouter.ai/api/v1",
+        )
+
     try:
         from langchain_openai import ChatOpenAI
     except ImportError:

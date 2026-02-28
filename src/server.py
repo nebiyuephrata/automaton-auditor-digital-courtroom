@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
@@ -65,7 +66,13 @@ class RuntimeOptionsResponse(BaseModel):
     judge_providers: list[str]
     vision_providers: list[str]
     default_models: dict[str, str]
+    default_judge_provider: str
+    default_vision_provider: str
     rubric_presets: list[dict]
+
+
+class AuditHistoryClearResponse(BaseModel):
+    deleted_count: int
 
 
 store = AuditStore()
@@ -76,6 +83,13 @@ security_config = SecurityConfig(
     rate_limit_per_minute=settings.api_rate_limit_per_minute,
 )
 rate_limiter = SlidingWindowRateLimiter(security_config.rate_limit_per_minute)
+
+ALLOWED_MODELS: dict[str, set[str]] = {
+    "openai": {"gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"},
+    "anthropic": {"claude-3-5-sonnet-latest", "claude-3-7-sonnet-latest"},
+    "ollama": {"llama3.1", "llama3.1:latest", "llama3.2", "mistral", "qwen2.5", "llava"},
+    "openrouter": set(),
+}
 
 
 @asynccontextmanager
@@ -111,13 +125,16 @@ async def health() -> dict:
 @app.get("/api/runtime/options", response_model=RuntimeOptionsResponse)
 async def runtime_options_endpoint() -> RuntimeOptionsResponse:
     return RuntimeOptionsResponse(
-        judge_providers=["openai", "anthropic", "ollama"],
-        vision_providers=["openai", "anthropic", "ollama"],
+        judge_providers=["openai", "anthropic", "openrouter", "ollama"],
+        vision_providers=["openai", "anthropic", "openrouter", "ollama"],
         default_models={
             "openai": "gpt-4o-mini",
             "anthropic": "claude-3-5-sonnet-latest",
+            "openrouter": "openai/gpt-4o-mini",
             "ollama": "llama3.1",
         },
+        default_judge_provider=settings.judge_provider,
+        default_vision_provider=settings.vision_provider,
         rubric_presets=list_rubric_presets(),
     )
 
@@ -227,6 +244,16 @@ async def list_audits_endpoint(
     return [AuditRunRecordResponse(**record) for record in records]
 
 
+@app.delete("/api/audits", response_model=AuditHistoryClearResponse)
+async def clear_audits_endpoint(
+    terminal_only: bool = True,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+) -> AuditHistoryClearResponse:
+    deleted_count = store.clear_runs(terminal_only=terminal_only)
+    return AuditHistoryClearResponse(deleted_count=deleted_count)
+
+
 @app.get("/api/audits/{run_id}", response_model=AuditRunRecordResponse)
 async def get_audit_endpoint(
     run_id: str,
@@ -259,6 +286,36 @@ async def get_audit_result_endpoint(
         raise HTTPException(status_code=404, detail=f"Result for run {run_id} not found") from exc
 
 
+@app.get("/api/audits/{run_id}/report-pdf")
+async def download_report_pdf_endpoint(
+    run_id: str,
+    _auth: None = Depends(enforce_api_auth),
+    _rate: None = Depends(enforce_rate_limit),
+):
+    try:
+        record = store.get_run(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found") from exc
+
+    pdf_path_raw = str(record.get("pdf_path", "")).strip()
+    if not pdf_path_raw:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} has no pdf_path configured")
+
+    path = Path(pdf_path_raw)
+    resolved = path if path.is_absolute() else (Path.cwd() / path)
+    resolved = resolved.resolve()
+    if resolved.suffix.lower() != ".pdf":
+        raise HTTPException(status_code=422, detail="Configured report path is not a PDF file")
+    if not resolved.exists() or not resolved.is_file():
+        raise HTTPException(status_code=404, detail=f"PDF file not found at {resolved}")
+
+    return Response(
+        content=resolved.read_bytes(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{resolved.name}"'},
+    )
+
+
 @app.post("/api/audits/{run_id}/cancel", response_model=AuditRunRecordResponse)
 async def cancel_audit_endpoint(
     run_id: str,
@@ -276,7 +333,7 @@ async def cancel_audit_endpoint(
 
 
 def _validate_runtime_config(runtime_config: RuntimeLLMConfig) -> None:
-    valid_providers = {"openai", "anthropic", "ollama"}
+    valid_providers = {"openai", "anthropic", "openrouter", "ollama"}
     if runtime_config.judge_provider.lower() not in valid_providers:
         raise HTTPException(
             status_code=422,
@@ -286,6 +343,32 @@ def _validate_runtime_config(runtime_config: RuntimeLLMConfig) -> None:
         raise HTTPException(
             status_code=422,
             detail=f"Unsupported vision_provider: {runtime_config.vision_provider}",
+        )
+    _validate_model_for_provider(
+        provider=runtime_config.judge_provider.lower(),
+        model=runtime_config.judge_model,
+        role="judge",
+    )
+    _validate_model_for_provider(
+        provider=runtime_config.vision_provider.lower(),
+        model=runtime_config.vision_model,
+        role="vision",
+    )
+
+
+def _validate_model_for_provider(provider: str, model: str, role: str) -> None:
+    if provider == "openrouter":
+        if not model.strip():
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unsupported {role}_model '{model}' for provider '{provider}'",
+            )
+        return
+    allowed = ALLOWED_MODELS.get(provider, set())
+    if model not in allowed:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported {role}_model '{model}' for provider '{provider}'",
         )
 
 

@@ -19,6 +19,8 @@ def main() -> None:
     parser.add_argument("--vision-model", default=None)
     parser.add_argument("--openai-api-key", default=None)
     parser.add_argument("--anthropic-api-key", default=None)
+    parser.add_argument("--openrouter-api-key", default=None)
+    parser.add_argument("--openrouter-base-url", default=None)
     parser.add_argument("--ollama-base-url", default=None)
     parser.add_argument(
         "--output",
@@ -36,6 +38,8 @@ def main() -> None:
             args.vision_model,
             args.openai_api_key,
             args.anthropic_api_key,
+            args.openrouter_api_key,
+            args.openrouter_base_url,
             args.ollama_base_url,
         ]
     ):
@@ -46,6 +50,8 @@ def main() -> None:
             vision_model=args.vision_model or "gpt-4o-mini",
             openai_api_key=args.openai_api_key,
             anthropic_api_key=args.anthropic_api_key,
+            openrouter_api_key=args.openrouter_api_key,
+            openrouter_base_url=args.openrouter_base_url,
             ollama_base_url=args.ollama_base_url,
         )
     result = run_audit(

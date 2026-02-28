@@ -22,6 +22,13 @@ class JudicialOpinion(BaseModel):
     cited_evidence: List[str] = Field(default_factory=list)
 
 
+class ImprovementAction(BaseModel):
+    priority: Literal["P0", "P1", "P2"]
+    action: str
+    rationale: str
+    target_files: List[str] = Field(default_factory=list)
+
+
 class CriterionResult(BaseModel):
     dimension_id: str
     dimension_name: str
@@ -29,6 +36,8 @@ class CriterionResult(BaseModel):
     judge_opinions: List[JudicialOpinion]
     dissent_summary: Optional[str] = Field(default=None)
     remediation: str
+    recommended_changes: List[str] = Field(default_factory=list)
+    detailed_improvements: List[ImprovementAction] = Field(default_factory=list)
 
 
 class AuditReport(BaseModel):
@@ -53,6 +62,8 @@ class RuntimeLLMConfig(BaseModel):
     vision_model: str = "gpt-4o-mini"
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    openrouter_base_url: Optional[str] = None
     ollama_base_url: Optional[str] = None
 
 
