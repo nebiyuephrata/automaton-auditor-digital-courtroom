@@ -46,12 +46,15 @@ def run_audit(
     result = app.invoke(state)
     markdown = result.get("rendered_markdown", "")
 
-    if output_path:
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(markdown, encoding="utf-8")
+    resolved_output_path = output_path or "audit/report_onself_generated/final_audit_report.md"
+    out = Path(resolved_output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(markdown, encoding="utf-8")
 
-    response: Dict[str, Any] = {"rendered_markdown": markdown}
+    response: Dict[str, Any] = {
+        "rendered_markdown": markdown,
+        "output_path": str(out),
+    }
     if "final_report" in result:
         response["final_report"] = result["final_report"].model_dump()
     if "errors" in result:
