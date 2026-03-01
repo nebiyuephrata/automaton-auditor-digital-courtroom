@@ -2,8 +2,9 @@
 
 Generated At: 2026-03-01T02:08:00Z  
 Run ID: peer-incoming-20260301-001  
-Repository: https://github.com/example/automaton-auditor-digital-courtroom
+Repository: https://github.com/nebiyuephrata/automaton-auditor-digital-courtroom
 Reviewer: Team Beta
+Runtime Profile: Default Fallback (deterministic synthesis path)
 
 ## Executive Summary
 Team Beta review confirms strong deterministic synthesis and graph orchestration. Main actionable gap is ensuring every generated artifact explicitly contains criterion-level remediation and evidence-linked file actions.

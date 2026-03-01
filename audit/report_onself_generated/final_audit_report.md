@@ -2,7 +2,8 @@
 
 Generated At: 2026-03-01T01:58:00Z  
 Run ID: self-20260301-001  
-Repository: https://github.com/example/automaton-auditor-digital-courtroom
+Repository: https://github.com/nebiyuephrata/automaton-auditor-digital-courtroom
+Runtime Profile: Default Fallback (deterministic synthesis path)
 
 ## Executive Summary
 Deterministic constitutional synthesis completed across detective implementation, orchestration, judicial reasoning, and reporting artifacts. The system demonstrates strong deterministic arbitration and evidence-backed recommendations, with notable variance in judicial persona differentiation that requires tighter prompt and schema guardrails.

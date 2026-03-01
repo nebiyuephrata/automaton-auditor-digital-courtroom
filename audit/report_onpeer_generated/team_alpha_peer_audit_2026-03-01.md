@@ -2,7 +2,8 @@
 
 Generated At: 2026-03-01T02:03:00Z  
 Run ID: peer-outgoing-20260301-001  
-Repository: https://github.com/team-alpha/constitutional-auditor
+Repository: https://github.com/nahdes/automation-auditor
+Runtime Profile: Default Fallback (deterministic synthesis path)
 
 ## Executive Summary
 Peer audit completed with strong orchestration and deterministic synthesis behavior. Primary gaps are in report artifact completeness and moderate inconsistency in judicial persona separation under malformed-output retries.
